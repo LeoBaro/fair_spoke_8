@@ -1,20 +1,28 @@
 [project]
-name = "fair-spoke-8"
+name = "spoke8leonardo"
 version = "0.1.0"
-description = ""
+description = "Add your description here"
 readme = "README.md"
-requires-python = ">=3.10"
-dependencies = [
-    "huggingface-hub==0.13.4",
-    "img2dataset>=1.45.0",
-    "ray[data]>=2.40.0",
-    "tqdm>=4.67.1",
+authors = [
+    { name = "Leonardo Baroncelli", email = "leonardo.baroncelli26@gmail.com" }
 ]
+requires-python = ">=3.10"
+dependencies = []
 
 [build-system]
-requires = ["setuptools>=61.0"]
-build-backend = "setuptools.build_meta"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
 
-[project.urls]
-"Repository" = "https://github.com/LeoBaro/fair_spoke_8"
-"Issues" = "https://github.com/LeoBaro/fair_spoke_8/issues"
+[dependency-groups]
+pipeline = [
+    "debugpy==1.8.0",
+    "diffusers>=0.23.1",
+    "numpy<2",
+    "pillow>=11.1.0",
+    "ray[data,default]>=2.40.0",
+    "transformers>=4.29.0",
+]
+download = [
+    "huggingface-hub==0.13.4",
+    "img2dataset>=1.45.0",
+]
