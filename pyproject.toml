@@ -1,44 +1,19 @@
+[project]
+name = "fair-spoke-8"
+version = "0.1.0"
+description = ""
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "huggingface-hub==0.13.4",
+    "img2dataset>=1.45.0",
+    "ray[data]>=2.40.0",
+    "tqdm>=4.67.1",
+]
+
 [build-system]
 requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
-
-[project]
-name = "fair_spoke_8_leonardo"
-version = "0.0.0"
-description = ""
-readme = "README.md"
-requires-python = ">=3.8"
-classifiers = [
-    "Programming Language :: Python :: 3.8"
-]
-authors = [
-    {name = "Leonardo Baroncelli", email = "leonardo.baroncelli26@gmail.com"},
-    {name = "Francesco Bernardi", email = ""},
-    {name = "Pietro Bongini", email = ""},
-    {name = "Fabio Di Matteo", email = ""},
-    {name = "Giancarlo Paoletti", email = ""},
-
-]
-maintainers = [
-    {name = "Leonardo Baroncelli", email = "leonardo.baroncelli26@gmail.com"},
-    {name = "Francesco Bernardi", email = ""},
-    {name = "Pietro Bongini", email = ""},
-    {name = "Fabio Di Matteo", email = ""},
-    {name = "Giancarlo Paoletti", email = ""}
-]
-
-dependencies = [
-    "transformers",
-    "datasets",
-    "accelerate",
-    "tqdm",
-    "img2dataset"
-]
-
-[project.optional-dependencies]
-dev = [
-    
-]
 
 [project.urls]
 "Repository" = "https://github.com/LeoBaro/fair_spoke_8"
