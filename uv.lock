@@ -176,6 +176,7 @@ wheels = [
 ]
 
 [[package]]
+<<<<<<< HEAD
 name = "anyio"
 version = "4.8.0"
 source = { registry = "https://pypi.org/simple" }
@@ -191,6 +192,8 @@ wheels = [
 ]
 
 [[package]]
+=======
+>>>>>>> feature/pipeline
 name = "appdirs"
 version = "1.4.4"
 source = { registry = "https://pypi.org/simple" }
@@ -200,6 +203,7 @@ wheels = [
 ]
 
 [[package]]
+<<<<<<< HEAD
 name = "appnope"
 version = "0.1.4"
 source = { registry = "https://pypi.org/simple" }
@@ -276,6 +280,8 @@ wheels = [
 ]
 
 [[package]]
+=======
+>>>>>>> feature/pipeline
 name = "async-timeout"
 version = "5.0.1"
 source = { registry = "https://pypi.org/simple" }
@@ -294,6 +300,7 @@ wheels = [
 ]
 
 [[package]]
+<<<<<<< HEAD
 name = "babel"
 version = "2.16.0"
 source = { registry = "https://pypi.org/simple" }
@@ -332,6 +339,8 @@ css = [
 ]
 
 [[package]]
+=======
+>>>>>>> feature/pipeline
 name = "braceexpand"
 version = "0.1.7"
 source = { registry = "https://pypi.org/simple" }
@@ -359,6 +368,7 @@ wheels = [
 ]
 
 [[package]]
+<<<<<<< HEAD
 name = "cffi"
 version = "1.17.1"
 source = { registry = "https://pypi.org/simple" }
@@ -416,6 +426,8 @@ wheels = [
 ]
 
 [[package]]
+=======
+>>>>>>> feature/pipeline
 name = "charset-normalizer"
 version = "3.4.1"
 source = { registry = "https://pypi.org/simple" }
@@ -510,6 +522,7 @@ wheels = [
 ]
 
 [[package]]
+<<<<<<< HEAD
 name = "comm"
 version = "0.2.2"
 source = { registry = "https://pypi.org/simple" }
@@ -664,6 +677,8 @@ wheels = [
 ]
 
 [[package]]
+=======
+>>>>>>> feature/pipeline
 name = "dataclasses"
 version = "0.8"
 source = { registry = "https://pypi.org/simple" }
@@ -690,6 +705,7 @@ wheels = [
 ]
 
 [[package]]
+<<<<<<< HEAD
 name = "decorator"
 version = "5.1.1"
 source = { registry = "https://pypi.org/simple" }
@@ -708,6 +724,8 @@ wheels = [
 ]
 
 [[package]]
+=======
+>>>>>>> feature/pipeline
 name = "diffusers"
 version = "0.23.1"
 source = { registry = "https://pypi.org/simple" }
@@ -748,6 +766,7 @@ wheels = [
 ]
 
 [[package]]
+<<<<<<< HEAD
 name = "exceptiongroup"
 version = "1.2.2"
 source = { registry = "https://pypi.org/simple" }
@@ -766,6 +785,8 @@ wheels = [
 ]
 
 [[package]]
+=======
+>>>>>>> feature/pipeline
 name = "exifread-nocycle"
 version = "3.0.1"
 source = { registry = "https://pypi.org/simple" }
@@ -775,6 +796,7 @@ wheels = [
 ]
 
 [[package]]
+<<<<<<< HEAD
 name = "fastjsonschema"
 version = "2.21.1"
 source = { registry = "https://pypi.org/simple" }
@@ -831,6 +853,8 @@ wheels = [
 ]
 
 [[package]]
+=======
+>>>>>>> feature/pipeline
 name = "filelock"
 version = "3.17.0"
 source = { registry = "https://pypi.org/simple" }
@@ -850,6 +874,7 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/94/ed/3b9a10605163f48517931083aee8364d4d6d3bb1aa9b75eb0a4a5e9fbfc1/fire-0.5.0.tar.gz", hash = "sha256:a6b0d49e98c8963910021f92bba66f65ab440da2982b78eb1bbf95a0a34aacc6", size = 88282 }
 
 [[package]]
+<<<<<<< HEAD
 name = "fonttools"
 version = "4.55.4"
 source = { registry = "https://pypi.org/simple" }
@@ -900,6 +925,8 @@ wheels = [
 ]
 
 [[package]]
+=======
+>>>>>>> feature/pipeline
 name = "frozenlist"
 version = "1.5.0"
 source = { registry = "https://pypi.org/simple" }
@@ -1088,6 +1115,7 @@ wheels = [
 ]
 
 [[package]]
+<<<<<<< HEAD
 name = "h11"
 version = "0.14.0"
 source = { registry = "https://pypi.org/simple" }
@@ -1125,6 +1153,8 @@ wheels = [
 ]
 
 [[package]]
+=======
+>>>>>>> feature/pipeline
 name = "huggingface-hub"
 version = "0.13.4"
 source = { registry = "https://pypi.org/simple" }
@@ -1185,6 +1215,7 @@ wheels = [
 ]
 
 [[package]]
+<<<<<<< HEAD
 name = "ipykernel"
 version = "6.29.5"
 source = { registry = "https://pypi.org/simple" }
@@ -1255,6 +1286,8 @@ wheels = [
 ]
 
 [[package]]
+=======
+>>>>>>> feature/pipeline
 name = "jinja2"
 version = "3.1.5"
 source = { registry = "https://pypi.org/simple" }
@@ -1267,6 +1300,7 @@ wheels = [
 ]
 
 [[package]]
+<<<<<<< HEAD
 name = "json5"
 version = "0.10.0"
 source = { registry = "https://pypi.org/simple" }
@@ -1285,6 +1319,8 @@ wheels = [
 ]
 
 [[package]]
+=======
+>>>>>>> feature/pipeline
 name = "jsonschema"
 version = "4.23.0"
 source = { registry = "https://pypi.org/simple" }
@@ -1299,6 +1335,7 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/69/4a/4f9dbeb84e8850557c02365a0eee0649abe5eb1d84af92a25731c6c0f922/jsonschema-4.23.0-py3-none-any.whl", hash = "sha256:fbadb6f8b144a8f8cf9f0b89ba94501d143e50411a1278633f56a7acf7fd5566", size = 88462 },
 ]
 
+<<<<<<< HEAD
 [package.optional-dependencies]
 format-nongpl = [
     { name = "fqdn" },
@@ -1311,6 +1348,8 @@ format-nongpl = [
     { name = "webcolors" },
 ]
 
+=======
+>>>>>>> feature/pipeline
 [[package]]
 name = "jsonschema-specifications"
 version = "2024.10.1"
@@ -1324,6 +1363,7 @@ wheels = [
 ]
 
 [[package]]
+<<<<<<< HEAD
 name = "jupyter-client"
 version = "8.6.3"
 source = { registry = "https://pypi.org/simple" }
@@ -1566,6 +1606,8 @@ wheels = [
 ]
 
 [[package]]
+=======
+>>>>>>> feature/pipeline
 name = "linkify-it-py"
 version = "2.0.3"
 source = { registry = "https://pypi.org/simple" }
@@ -1611,8 +1653,11 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/cc/cd/07438f95f83e8bc028279909d9c9bd39e24149b0d60053a97b2bc4f8aa51/MarkupSafe-3.0.2-cp310-cp310-musllinux_1_2_aarch64.whl", hash = "sha256:3809ede931876f5b2ec92eef964286840ed3540dadf803dd570c3b7e13141a3b", size = 21977 },
     { url = "https://files.pythonhosted.org/packages/29/01/84b57395b4cc062f9c4c55ce0df7d3108ca32397299d9df00fedd9117d3d/MarkupSafe-3.0.2-cp310-cp310-musllinux_1_2_i686.whl", hash = "sha256:e07c3764494e3776c602c1e78e298937c3315ccc9043ead7e685b7f2b8d47b3c", size = 21366 },
     { url = "https://files.pythonhosted.org/packages/bd/6e/61ebf08d8940553afff20d1fb1ba7294b6f8d279df9fd0c0db911b4bbcfd/MarkupSafe-3.0.2-cp310-cp310-musllinux_1_2_x86_64.whl", hash = "sha256:b424c77b206d63d500bcb69fa55ed8d0e6a3774056bdc4839fc9298a7edca171", size = 21091 },
+<<<<<<< HEAD
     { url = "https://files.pythonhosted.org/packages/11/23/ffbf53694e8c94ebd1e7e491de185124277964344733c45481f32ede2499/MarkupSafe-3.0.2-cp310-cp310-win32.whl", hash = "sha256:fcabf5ff6eea076f859677f5f0b6b5c1a51e70a376b0579e0eadef8db48c6b50", size = 15065 },
     { url = "https://files.pythonhosted.org/packages/44/06/e7175d06dd6e9172d4a69a72592cb3f7a996a9c396eee29082826449bbc3/MarkupSafe-3.0.2-cp310-cp310-win_amd64.whl", hash = "sha256:6af100e168aa82a50e186c82875a5893c5597a0c1ccdb0d8b40240b1f28b969a", size = 15514 },
+=======
+>>>>>>> feature/pipeline
     { url = "https://files.pythonhosted.org/packages/6b/28/bbf83e3f76936960b850435576dd5e67034e200469571be53f69174a2dfd/MarkupSafe-3.0.2-cp311-cp311-macosx_10_9_universal2.whl", hash = "sha256:9025b4018f3a1314059769c7bf15441064b2207cb3f065e6ea1e7359cb46db9d", size = 14353 },
     { url = "https://files.pythonhosted.org/packages/6c/30/316d194b093cde57d448a4c3209f22e3046c5bb2fb0820b118292b334be7/MarkupSafe-3.0.2-cp311-cp311-macosx_11_0_arm64.whl", hash = "sha256:93335ca3812df2f366e80509ae119189886b0f3c2b81325d39efdb84a1e2ae93", size = 12392 },
     { url = "https://files.pythonhosted.org/packages/f2/96/9cdafba8445d3a53cae530aaf83c38ec64c4d5427d975c974084af5bc5d2/MarkupSafe-3.0.2-cp311-cp311-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:2cb8438c3cbb25e220c2ab33bb226559e7afb3baec11c4f218ffa7308603c832", size = 23984 },
@@ -1621,8 +1666,11 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/00/7b/e92c64e079b2d0d7ddf69899c98842f3f9a60a1ae72657c89ce2655c999d/MarkupSafe-3.0.2-cp311-cp311-musllinux_1_2_aarch64.whl", hash = "sha256:d8213e09c917a951de9d09ecee036d5c7d36cb6cb7dbaece4c71a60d79fb9798", size = 24057 },
     { url = "https://files.pythonhosted.org/packages/f9/ac/46f960ca323037caa0a10662ef97d0a4728e890334fc156b9f9e52bcc4ca/MarkupSafe-3.0.2-cp311-cp311-musllinux_1_2_i686.whl", hash = "sha256:5b02fb34468b6aaa40dfc198d813a641e3a63b98c2b05a16b9f80b7ec314185e", size = 23359 },
     { url = "https://files.pythonhosted.org/packages/69/84/83439e16197337b8b14b6a5b9c2105fff81d42c2a7c5b58ac7b62ee2c3b1/MarkupSafe-3.0.2-cp311-cp311-musllinux_1_2_x86_64.whl", hash = "sha256:0bff5e0ae4ef2e1ae4fdf2dfd5b76c75e5c2fa4132d05fc1b0dabcd20c7e28c4", size = 23306 },
+<<<<<<< HEAD
     { url = "https://files.pythonhosted.org/packages/9a/34/a15aa69f01e2181ed8d2b685c0d2f6655d5cca2c4db0ddea775e631918cd/MarkupSafe-3.0.2-cp311-cp311-win32.whl", hash = "sha256:6c89876f41da747c8d3677a2b540fb32ef5715f97b66eeb0c6b66f5e3ef6f59d", size = 15094 },
     { url = "https://files.pythonhosted.org/packages/da/b8/3a3bd761922d416f3dc5d00bfbed11f66b1ab89a0c2b6e887240a30b0f6b/MarkupSafe-3.0.2-cp311-cp311-win_amd64.whl", hash = "sha256:70a87b411535ccad5ef2f1df5136506a10775d267e197e4cf531ced10537bd6b", size = 15521 },
+=======
+>>>>>>> feature/pipeline
     { url = "https://files.pythonhosted.org/packages/22/09/d1f21434c97fc42f09d290cbb6350d44eb12f09cc62c9476effdb33a18aa/MarkupSafe-3.0.2-cp312-cp312-macosx_10_13_universal2.whl", hash = "sha256:9778bd8ab0a994ebf6f84c2b949e65736d5575320a17ae8984a77fab08db94cf", size = 14274 },
     { url = "https://files.pythonhosted.org/packages/6b/b0/18f76bba336fa5aecf79d45dcd6c806c280ec44538b3c13671d49099fdd0/MarkupSafe-3.0.2-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:846ade7b71e3536c4e56b386c2a47adf5741d2d8b94ec9dc3e92e5e1ee1e2225", size = 12348 },
     { url = "https://files.pythonhosted.org/packages/e0/25/dd5c0f6ac1311e9b40f4af06c78efde0f3b5cbf02502f8ef9501294c425b/MarkupSafe-3.0.2-cp312-cp312-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:1c99d261bd2d5f6b59325c92c73df481e05e57f19837bdca8413b9eac4bd8028", size = 24149 },
@@ -1631,8 +1679,11 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/da/0e/1f32af846df486dce7c227fe0f2398dc7e2e51d4a370508281f3c1c5cddc/MarkupSafe-3.0.2-cp312-cp312-musllinux_1_2_aarch64.whl", hash = "sha256:2181e67807fc2fa785d0592dc2d6206c019b9502410671cc905d132a92866557", size = 24178 },
     { url = "https://files.pythonhosted.org/packages/c4/f6/bb3ca0532de8086cbff5f06d137064c8410d10779c4c127e0e47d17c0b71/MarkupSafe-3.0.2-cp312-cp312-musllinux_1_2_i686.whl", hash = "sha256:52305740fe773d09cffb16f8ed0427942901f00adedac82ec8b67752f58a1b22", size = 23319 },
     { url = "https://files.pythonhosted.org/packages/a2/82/8be4c96ffee03c5b4a034e60a31294daf481e12c7c43ab8e34a1453ee48b/MarkupSafe-3.0.2-cp312-cp312-musllinux_1_2_x86_64.whl", hash = "sha256:ad10d3ded218f1039f11a75f8091880239651b52e9bb592ca27de44eed242a48", size = 23352 },
+<<<<<<< HEAD
     { url = "https://files.pythonhosted.org/packages/51/ae/97827349d3fcffee7e184bdf7f41cd6b88d9919c80f0263ba7acd1bbcb18/MarkupSafe-3.0.2-cp312-cp312-win32.whl", hash = "sha256:0f4ca02bea9a23221c0182836703cbf8930c5e9454bacce27e767509fa286a30", size = 15097 },
     { url = "https://files.pythonhosted.org/packages/c1/80/a61f99dc3a936413c3ee4e1eecac96c0da5ed07ad56fd975f1a9da5bc630/MarkupSafe-3.0.2-cp312-cp312-win_amd64.whl", hash = "sha256:8e06879fc22a25ca47312fbe7c8264eb0b662f6db27cb2d3bbbc74b1df4b9b87", size = 15601 },
+=======
+>>>>>>> feature/pipeline
     { url = "https://files.pythonhosted.org/packages/83/0e/67eb10a7ecc77a0c2bbe2b0235765b98d164d81600746914bebada795e97/MarkupSafe-3.0.2-cp313-cp313-macosx_10_13_universal2.whl", hash = "sha256:ba9527cdd4c926ed0760bc301f6728ef34d841f405abf9d4f959c478421e4efd", size = 14274 },
     { url = "https://files.pythonhosted.org/packages/2b/6d/9409f3684d3335375d04e5f05744dfe7e9f120062c9857df4ab490a1031a/MarkupSafe-3.0.2-cp313-cp313-macosx_11_0_arm64.whl", hash = "sha256:f8b3d067f2e40fe93e1ccdd6b2e1d16c43140e76f02fb1319a05cf2b79d99430", size = 12352 },
     { url = "https://files.pythonhosted.org/packages/d2/f5/6eadfcd3885ea85fe2a7c128315cc1bb7241e1987443d78c8fe712d03091/MarkupSafe-3.0.2-cp313-cp313-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:569511d3b58c8791ab4c2e1285575265991e6d8f8700c7be0e88f86cb0672094", size = 24122 },
@@ -1641,8 +1692,11 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/2a/9f/8619835cd6a711d6272d62abb78c033bda638fdc54c4e7f4272cf1c0962b/MarkupSafe-3.0.2-cp313-cp313-musllinux_1_2_aarch64.whl", hash = "sha256:cdb82a876c47801bb54a690c5ae105a46b392ac6099881cdfb9f6e95e4014c6a", size = 24208 },
     { url = "https://files.pythonhosted.org/packages/f9/bf/176950a1792b2cd2102b8ffeb5133e1ed984547b75db47c25a67d3359f77/MarkupSafe-3.0.2-cp313-cp313-musllinux_1_2_i686.whl", hash = "sha256:cabc348d87e913db6ab4aa100f01b08f481097838bdddf7c7a84b7575b7309ca", size = 23357 },
     { url = "https://files.pythonhosted.org/packages/ce/4f/9a02c1d335caabe5c4efb90e1b6e8ee944aa245c1aaaab8e8a618987d816/MarkupSafe-3.0.2-cp313-cp313-musllinux_1_2_x86_64.whl", hash = "sha256:444dcda765c8a838eaae23112db52f1efaf750daddb2d9ca300bcae1039adc5c", size = 23344 },
+<<<<<<< HEAD
     { url = "https://files.pythonhosted.org/packages/ee/55/c271b57db36f748f0e04a759ace9f8f759ccf22b4960c270c78a394f58be/MarkupSafe-3.0.2-cp313-cp313-win32.whl", hash = "sha256:bcf3e58998965654fdaff38e58584d8937aa3096ab5354d493c77d1fdd66d7a1", size = 15101 },
     { url = "https://files.pythonhosted.org/packages/29/88/07df22d2dd4df40aba9f3e402e6dc1b8ee86297dddbad4872bd5e7b0094f/MarkupSafe-3.0.2-cp313-cp313-win_amd64.whl", hash = "sha256:e6a2a455bd412959b57a172ce6328d2dd1f01cb2135efda2e4576e8a23fa3b0f", size = 15603 },
+=======
+>>>>>>> feature/pipeline
     { url = "https://files.pythonhosted.org/packages/62/6a/8b89d24db2d32d433dffcd6a8779159da109842434f1dd2f6e71f32f738c/MarkupSafe-3.0.2-cp313-cp313t-macosx_10_13_universal2.whl", hash = "sha256:b5a6b3ada725cea8a5e634536b1b01c30bcdcd7f9c6fff4151548d5bf6b3a36c", size = 14510 },
     { url = "https://files.pythonhosted.org/packages/7a/06/a10f955f70a2e5a9bf78d11a161029d278eeacbd35ef806c3fd17b13060d/MarkupSafe-3.0.2-cp313-cp313t-macosx_11_0_arm64.whl", hash = "sha256:a904af0a6162c73e3edcb969eeeb53a63ceeb5d8cf642fade7d39e7963a22ddb", size = 12486 },
     { url = "https://files.pythonhosted.org/packages/34/cf/65d4a571869a1a9078198ca28f39fba5fbb910f952f9dbc5220afff9f5e6/MarkupSafe-3.0.2-cp313-cp313t-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:4aa4e5faecf353ed117801a068ebab7b7e09ffb6e1d5e412dc852e0da018126c", size = 25480 },
@@ -1651,6 +1705,7 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/bb/35/cbe9238ec3f47ac9a7c8b3df7a808e7cb50fe149dc7039f5f454b3fba218/MarkupSafe-3.0.2-cp313-cp313t-musllinux_1_2_aarch64.whl", hash = "sha256:6381026f158fdb7c72a168278597a5e3a5222e83ea18f543112b2662a9b699c5", size = 25473 },
     { url = "https://files.pythonhosted.org/packages/e6/32/7621a4382488aa283cc05e8984a9c219abad3bca087be9ec77e89939ded9/MarkupSafe-3.0.2-cp313-cp313t-musllinux_1_2_i686.whl", hash = "sha256:3d79d162e7be8f996986c064d1c7c817f6df3a77fe3d6859f6f9e7be4b8c213a", size = 24114 },
     { url = "https://files.pythonhosted.org/packages/0d/80/0985960e4b89922cb5a0bac0ed39c5b96cbc1a536a99f30e8c220a996ed9/MarkupSafe-3.0.2-cp313-cp313t-musllinux_1_2_x86_64.whl", hash = "sha256:131a3c7689c85f5ad20f9f6fb1b866f402c445b220c19fe4308c0b147ccd2ad9", size = 24098 },
+<<<<<<< HEAD
     { url = "https://files.pythonhosted.org/packages/82/78/fedb03c7d5380df2427038ec8d973587e90561b2d90cd472ce9254cf348b/MarkupSafe-3.0.2-cp313-cp313t-win32.whl", hash = "sha256:ba8062ed2cf21c07a9e295d5b8a2a5ce678b913b45fdf68c32d95d6c1291e0b6", size = 15208 },
     { url = "https://files.pythonhosted.org/packages/4f/65/6079a46068dfceaeabb5dcad6d674f5f5c61a6fa5673746f42a9f4c233b3/MarkupSafe-3.0.2-cp313-cp313t-win_amd64.whl", hash = "sha256:e444a31f8db13eb18ada366ab3cf45fd4b31e4db1236a4448f68778c1d1a5a2f", size = 15739 },
 ]
@@ -1717,6 +1772,8 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/99/5b/a36a337438a14116b16480db471ad061c36c3694df7c2084a0da7ba538b7/matplotlib_inline-0.1.7.tar.gz", hash = "sha256:8423b23ec666be3d16e16b60bdd8ac4e86e840ebd1dd11a30b9f117f2fa0ab90", size = 8159 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/8f/8e/9ad090d3553c280a8060fbf6e24dc1c0c29704ee7d1c372f0c174aa59285/matplotlib_inline-0.1.7-py3-none-any.whl", hash = "sha256:df192d39a4ff8f21b1895d72e6a13f5fcc5099f00fa84384e0ea28c2cc0653ca", size = 9899 },
+=======
+>>>>>>> feature/pipeline
 ]
 
 [[package]]
@@ -1780,6 +1837,7 @@ wheels = [
 ]
 
 [[package]]
+<<<<<<< HEAD
 name = "mistune"
 version = "3.1.0"
 source = { registry = "https://pypi.org/simple" }
@@ -1792,6 +1850,8 @@ wheels = [
 ]
 
 [[package]]
+=======
+>>>>>>> feature/pipeline
 name = "msgpack"
 version = "1.1.0"
 source = { registry = "https://pypi.org/simple" }
@@ -1916,6 +1976,7 @@ wheels = [
 ]
 
 [[package]]
+<<<<<<< HEAD
 name = "nbclient"
 version = "0.10.2"
 source = { registry = "https://pypi.org/simple" }
@@ -1992,6 +2053,8 @@ wheels = [
 ]
 
 [[package]]
+=======
+>>>>>>> feature/pipeline
 name = "numpy"
 version = "1.26.4"
 source = { registry = "https://pypi.org/simple" }
@@ -2064,6 +2127,7 @@ wheels = [
 ]
 
 [[package]]
+<<<<<<< HEAD
 name = "overrides"
 version = "7.7.0"
 source = { registry = "https://pypi.org/simple" }
@@ -2073,6 +2137,8 @@ wheels = [
 ]
 
 [[package]]
+=======
+>>>>>>> feature/pipeline
 name = "packaging"
 version = "24.2"
 source = { registry = "https://pypi.org/simple" }
@@ -2130,6 +2196,7 @@ wheels = [
 ]
 
 [[package]]
+<<<<<<< HEAD
 name = "pandocfilters"
 version = "1.5.1"
 source = { registry = "https://pypi.org/simple" }
@@ -2160,6 +2227,8 @@ wheels = [
 ]
 
 [[package]]
+=======
+>>>>>>> feature/pipeline
 name = "pillow"
 version = "11.1.0"
 source = { registry = "https://pypi.org/simple" }
@@ -2245,6 +2314,7 @@ wheels = [
 ]
 
 [[package]]
+<<<<<<< HEAD
 name = "prompt-toolkit"
 version = "3.0.50"
 source = { registry = "https://pypi.org/simple" }
@@ -2257,6 +2327,8 @@ wheels = [
 ]
 
 [[package]]
+=======
+>>>>>>> feature/pipeline
 name = "propcache"
 version = "0.2.1"
 source = { registry = "https://pypi.org/simple" }
@@ -2371,6 +2443,7 @@ wheels = [
 ]
 
 [[package]]
+<<<<<<< HEAD
 name = "ptyprocess"
 version = "0.7.0"
 source = { registry = "https://pypi.org/simple" }
@@ -2389,6 +2462,8 @@ wheels = [
 ]
 
 [[package]]
+=======
+>>>>>>> feature/pipeline
 name = "py-spy"
 version = "0.4.0"
 source = { registry = "https://pypi.org/simple" }
@@ -2457,6 +2532,7 @@ wheels = [
 ]
 
 [[package]]
+<<<<<<< HEAD
 name = "pycparser"
 version = "2.22"
 source = { registry = "https://pypi.org/simple" }
@@ -2466,6 +2542,8 @@ wheels = [
 ]
 
 [[package]]
+=======
+>>>>>>> feature/pipeline
 name = "pydantic"
 version = "2.10.5"
 source = { registry = "https://pypi.org/simple" }
@@ -2564,6 +2642,7 @@ wheels = [
 ]
 
 [[package]]
+<<<<<<< HEAD
 name = "pyparsing"
 version = "3.2.1"
 source = { registry = "https://pypi.org/simple" }
@@ -2573,6 +2652,8 @@ wheels = [
 ]
 
 [[package]]
+=======
+>>>>>>> feature/pipeline
 name = "python-dateutil"
 version = "2.9.0.post0"
 source = { registry = "https://pypi.org/simple" }
@@ -2585,6 +2666,7 @@ wheels = [
 ]
 
 [[package]]
+<<<<<<< HEAD
 name = "python-json-logger"
 version = "3.2.1"
 source = { registry = "https://pypi.org/simple" }
@@ -2594,6 +2676,8 @@ wheels = [
 ]
 
 [[package]]
+=======
+>>>>>>> feature/pipeline
 name = "pytz"
 version = "2024.2"
 source = { registry = "https://pypi.org/simple" }
@@ -2603,6 +2687,7 @@ wheels = [
 ]
 
 [[package]]
+<<<<<<< HEAD
 name = "pywin32"
 version = "308"
 source = { registry = "https://pypi.org/simple" }
@@ -2634,6 +2719,8 @@ wheels = [
 ]
 
 [[package]]
+=======
+>>>>>>> feature/pipeline
 name = "pyyaml"
 version = "6.0.2"
 source = { registry = "https://pypi.org/simple" }
@@ -2678,6 +2765,7 @@ wheels = [
 ]
 
 [[package]]
+<<<<<<< HEAD
 name = "pyzmq"
 version = "26.2.0"
 source = { registry = "https://pypi.org/simple" }
@@ -2751,6 +2839,8 @@ wheels = [
 ]
 
 [[package]]
+=======
+>>>>>>> feature/pipeline
 name = "ray"
 version = "2.40.0"
 source = { registry = "https://pypi.org/simple" }
@@ -2905,6 +2995,7 @@ wheels = [
 ]
 
 [[package]]
+<<<<<<< HEAD
 name = "rfc3339-validator"
 version = "0.1.4"
 source = { registry = "https://pypi.org/simple" }
@@ -2926,6 +3017,8 @@ wheels = [
 ]
 
 [[package]]
+=======
+>>>>>>> feature/pipeline
 name = "rich"
 version = "13.9.4"
 source = { registry = "https://pypi.org/simple" }
@@ -3109,6 +3202,7 @@ wheels = [
 ]
 
 [[package]]
+<<<<<<< HEAD
 name = "send2trash"
 version = "1.8.3"
 source = { registry = "https://pypi.org/simple" }
@@ -3118,6 +3212,8 @@ wheels = [
 ]
 
 [[package]]
+=======
+>>>>>>> feature/pipeline
 name = "sentry-sdk"
 version = "2.20.0"
 source = { registry = "https://pypi.org/simple" }
@@ -3306,6 +3402,7 @@ wheels = [
 ]
 
 [[package]]
+<<<<<<< HEAD
 name = "sniffio"
 version = "1.3.1"
 source = { registry = "https://pypi.org/simple" }
@@ -3324,12 +3421,15 @@ wheels = [
 ]
 
 [[package]]
+=======
+>>>>>>> feature/pipeline
 name = "spoke8leonardo"
 version = "0.1.0"
 source = { editable = "." }
 
 [package.dev-dependencies]
 download = [
+<<<<<<< HEAD
     { name = "fastparquet" },
     { name = "huggingface-hub" },
     { name = "img2dataset" },
@@ -3337,6 +3437,10 @@ download = [
     { name = "jupyterlab" },
     { name = "matplotlib" },
     { name = "pandas" },
+=======
+    { name = "huggingface-hub" },
+    { name = "img2dataset" },
+>>>>>>> feature/pipeline
 ]
 pipeline = [
     { name = "debugpy" },
@@ -3351,6 +3455,7 @@ pipeline = [
 
 [package.metadata.requires-dev]
 download = [
+<<<<<<< HEAD
     { name = "fastparquet", specifier = ">=2024.11.0" },
     { name = "huggingface-hub", specifier = "==0.13.4" },
     { name = "img2dataset", specifier = ">=1.45.0" },
@@ -3358,6 +3463,10 @@ download = [
     { name = "jupyterlab", specifier = ">=4.3.4" },
     { name = "matplotlib", specifier = ">=3.10.0" },
     { name = "pandas", specifier = ">=2.2.3" },
+=======
+    { name = "huggingface-hub", specifier = "==0.13.4" },
+    { name = "img2dataset", specifier = ">=1.45.0" },
+>>>>>>> feature/pipeline
 ]
 pipeline = [
     { name = "debugpy", specifier = "==1.8.0" },
@@ -3369,6 +3478,7 @@ pipeline = [
 ]
 
 [[package]]
+<<<<<<< HEAD
 name = "stack-data"
 version = "0.6.3"
 source = { registry = "https://pypi.org/simple" }
@@ -3383,6 +3493,8 @@ wheels = [
 ]
 
 [[package]]
+=======
+>>>>>>> feature/pipeline
 name = "stringzilla"
 version = "3.11.3"
 source = { registry = "https://pypi.org/simple" }
@@ -3468,6 +3580,7 @@ wheels = [
 ]
 
 [[package]]
+<<<<<<< HEAD
 name = "terminado"
 version = "0.18.1"
 source = { registry = "https://pypi.org/simple" }
@@ -3482,6 +3595,8 @@ wheels = [
 ]
 
 [[package]]
+=======
+>>>>>>> feature/pipeline
 name = "textual"
 version = "1.0.0"
 source = { registry = "https://pypi.org/simple" }
@@ -3497,6 +3612,7 @@ wheels = [
 ]
 
 [[package]]
+<<<<<<< HEAD
 name = "tinycss2"
 version = "1.4.0"
 source = { registry = "https://pypi.org/simple" }
@@ -3509,6 +3625,8 @@ wheels = [
 ]
 
 [[package]]
+=======
+>>>>>>> feature/pipeline
 name = "tokenizers"
 version = "0.13.3"
 source = { registry = "https://pypi.org/simple" }
@@ -3533,6 +3651,7 @@ wheels = [
 ]
 
 [[package]]
+<<<<<<< HEAD
 name = "tomli"
 version = "2.2.1"
 source = { registry = "https://pypi.org/simple" }
@@ -3590,6 +3709,8 @@ wheels = [
 ]
 
 [[package]]
+=======
+>>>>>>> feature/pipeline
 name = "tqdm"
 version = "4.67.1"
 source = { registry = "https://pypi.org/simple" }
@@ -3602,6 +3723,7 @@ wheels = [
 ]
 
 [[package]]
+<<<<<<< HEAD
 name = "traitlets"
 version = "5.14.3"
 source = { registry = "https://pypi.org/simple" }
@@ -3611,6 +3733,8 @@ wheels = [
 ]
 
 [[package]]
+=======
+>>>>>>> feature/pipeline
 name = "transformers"
 version = "4.29.0"
 source = { registry = "https://pypi.org/simple" }
@@ -3631,6 +3755,7 @@ wheels = [
 ]
 
 [[package]]
+<<<<<<< HEAD
 name = "types-python-dateutil"
 version = "2.9.0.20241206"
 source = { registry = "https://pypi.org/simple" }
@@ -3640,6 +3765,8 @@ wheels = [
 ]
 
 [[package]]
+=======
+>>>>>>> feature/pipeline
 name = "typing-extensions"
 version = "4.12.2"
 source = { registry = "https://pypi.org/simple" }
@@ -3667,6 +3794,7 @@ wheels = [
 ]
 
 [[package]]
+<<<<<<< HEAD
 name = "uri-template"
 version = "1.3.0"
 source = { registry = "https://pypi.org/simple" }
@@ -3676,6 +3804,8 @@ wheels = [
 ]
 
 [[package]]
+=======
+>>>>>>> feature/pipeline
 name = "urllib3"
 version = "2.3.0"
 source = { registry = "https://pypi.org/simple" }
@@ -3721,6 +3851,7 @@ wheels = [
 ]
 
 [[package]]
+<<<<<<< HEAD
 name = "wcwidth"
 version = "0.2.13"
 source = { registry = "https://pypi.org/simple" }
@@ -3739,6 +3870,8 @@ wheels = [
 ]
 
 [[package]]
+=======
+>>>>>>> feature/pipeline
 name = "webdataset"
 version = "0.2.100"
 source = { registry = "https://pypi.org/simple" }
@@ -3753,6 +3886,7 @@ wheels = [
 ]
 
 [[package]]
+<<<<<<< HEAD
 name = "webencodings"
 version = "0.5.1"
 source = { registry = "https://pypi.org/simple" }
@@ -3771,6 +3905,8 @@ wheels = [
 ]
 
 [[package]]
+=======
+>>>>>>> feature/pipeline
 name = "wrapt"
 version = "1.17.2"
 source = { registry = "https://pypi.org/simple" }
