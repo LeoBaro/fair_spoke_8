@@ -172,10 +172,10 @@ if __name__ == "__main__":
 
         print(f"Downloading metadata to {metadata_dir}...")
 
-        cache_dir = metadata_dir.parent / f"hf"
+        cache_dir = metadata_dir.parent / "hf"
         hf_snapshot_args = dict(
             repo_id=hf_repo,
-            allow_patterns=f"*.parquet",
+            allow_patterns="*.parquet",
             local_dir=metadata_dir,
             cache_dir=cache_dir,
             local_dir_use_symlinks=False,
