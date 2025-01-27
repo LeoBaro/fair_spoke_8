@@ -1,0 +1,139 @@
+wandb_version: 1
+
+_wandb:
+  desc: null
+  value:
+    cli_version: 0.12.21
+    framework: torch
+    is_jupyter_run: false
+    is_kaggle_kernel: false
+    python_version: 3.10.8
+    start_time: 1734981856
+    t:
+      1:
+      - 1
+      - 5
+      - 49
+      - 53
+      - 55
+      - 80
+      3:
+      - 16
+      4: 3.10.8
+      5: 0.12.21
+      8:
+      - 5
+      - 9
+bbox_col:
+  desc: null
+  value: face_bboxes
+caption_col:
+  desc: null
+  value: text
+compute_hash:
+  desc: null
+  value: sha256
+disable_all_reencoding:
+  desc: null
+  value: false
+disallowed_header_directives:
+  desc: null
+  value:
+  - noai
+  - noimageai
+  - noindex
+  - noimageindex
+distributor:
+  desc: null
+  value: multiprocessing
+downscale_interpolation:
+  desc: null
+  value: area
+enable_wandb:
+  desc: null
+  value: true
+encode_format:
+  desc: null
+  value: jpg
+encode_quality:
+  desc: null
+  value: 95
+extract_exif:
+  desc: null
+  value: true
+image_size:
+  desc: null
+  value: 512
+incremental_mode:
+  desc: null
+  value: incremental
+input_format:
+  desc: null
+  value: parquet
+max_aspect_ratio:
+  desc: null
+  value: .inf
+max_image_area:
+  desc: null
+  value: .inf
+max_shard_retry:
+  desc: null
+  value: 1
+min_image_size:
+  desc: null
+  value: 0
+number_sample_per_shard:
+  desc: null
+  value: 10000
+oom_shard_count:
+  desc: null
+  value: 8
+output_folder:
+  desc: null
+  value: /home/leobaro/Downloads/datasets/web/datacomp/shards
+output_format:
+  desc: null
+  value: webdataset
+processes_count:
+  desc: null
+  value: 16
+resize_mode:
+  desc: null
+  value: keep_ratio_largest
+resize_only_if_bigger:
+  desc: null
+  value: true
+retries:
+  desc: null
+  value: 3
+save_additional_columns:
+  desc: null
+  value:
+  - uid
+skip_reencode:
+  desc: null
+  value: false
+subjob_size:
+  desc: null
+  value: 1000
+thread_count:
+  desc: null
+  value: 64
+timeout:
+  desc: null
+  value: 10
+upscale_interpolation:
+  desc: null
+  value: lanczos
+url_col:
+  desc: null
+  value: url
+url_list:
+  desc: null
+  value: /home/leobaro/Downloads/datasets/web/datacomp/metadata
+user_agent_token:
+  desc: null
+  value: null
+wandb_project:
+  desc: null
+  value: datacomp
