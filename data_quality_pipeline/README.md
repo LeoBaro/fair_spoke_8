@@ -5,17 +5,22 @@
 git clone https://${GITHUB_USER}:${GITHUB_TOKEN}:@github.com/${GITHUB_REPOSITORY}
 ```
 
-
 ## Setup
 
 This project has been setup with uv
 ```bash
 uv init --lib --name spoke8leonardo --build-backend hatch
 ```
+To get started:
+```bash
+uv python install 3.10
+uv venv
+```
+
 
 To add dependencies:
 ```bash
-uv add <name> --group <name>
+uv add <name> 
 ```
 
 ## Ray webdataset loader
