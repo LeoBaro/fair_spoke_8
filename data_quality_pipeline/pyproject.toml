@@ -1,0 +1,22 @@
+[project]
+name = "spoke8leonardo"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "Leonardo Baroncelli", email = "leonardo.baroncelli26@gmail.com" }
+]
+requires-python = ">=3.10"
+dependencies = [
+    "debugpy==1.8.0",
+    "diffusers>=0.23.1",
+    "numpy<2",
+    "pillow>=11.1.0",
+    "ray[data,default]>=2.40.0",
+    "transformers>=4.29.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
