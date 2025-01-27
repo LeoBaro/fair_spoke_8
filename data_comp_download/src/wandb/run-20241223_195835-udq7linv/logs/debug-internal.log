@@ -1,0 +1,68 @@
+2024-12-23 19:58:35,492 INFO    MainThread:34567 [internal.py:wandb_internal():90] W&B internal server running at pid: 34567, started at: 2024-12-23 19:58:35.492140
+2024-12-23 19:58:35,493 INFO    WriterThread:34567 [datastore.py:open_for_write():75] open: /home/leobaro/workspace/labs/fair_spoke_8/fair_spoke_8_leonardo/scripts/wandb/run-20241223_195835-udq7linv/run-udq7linv.wandb
+2024-12-23 19:58:35,579 DEBUG   SenderThread:34567 [sender.py:send():236] send: header
+2024-12-23 19:58:35,579 DEBUG   SenderThread:34567 [sender.py:send():236] send: run
+2024-12-23 19:59:05,127 DEBUG   HandlerThread:34567 [handler.py:handle_request():140] handle_request: shutdown
+2024-12-23 19:59:05,128 INFO    HandlerThread:34567 [handler.py:finish():806] shutting down handler
+2024-12-23 19:59:05,504 INFO    WriterThread:34567 [datastore.py:close():279] close: /home/leobaro/workspace/labs/fair_spoke_8/fair_spoke_8_leonardo/scripts/wandb/run-20241223_195835-udq7linv/run-udq7linv.wandb
+2024-12-23 19:59:13,938 ERROR   SenderThread:34567 [retry.py:__call__():132] Retry attempt failed:
+Traceback (most recent call last):
+  File "/home/leobaro/softwares/miniconda3/envs/datacomp/lib/python3.10/site-packages/urllib3/connection.py", line 174, in _new_conn
+    conn = connection.create_connection(
+  File "/home/leobaro/softwares/miniconda3/envs/datacomp/lib/python3.10/site-packages/urllib3/util/connection.py", line 72, in create_connection
+    for res in socket.getaddrinfo(host, port, family, socket.SOCK_STREAM):
+  File "/home/leobaro/softwares/miniconda3/envs/datacomp/lib/python3.10/socket.py", line 955, in getaddrinfo
+    for res in _socket.getaddrinfo(host, port, family, type, proto, flags):
+socket.gaierror: [Errno -3] Temporary failure in name resolution
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/home/leobaro/softwares/miniconda3/envs/datacomp/lib/python3.10/site-packages/urllib3/connectionpool.py", line 703, in urlopen
+    httplib_response = self._make_request(
+  File "/home/leobaro/softwares/miniconda3/envs/datacomp/lib/python3.10/site-packages/urllib3/connectionpool.py", line 386, in _make_request
+    self._validate_conn(conn)
+  File "/home/leobaro/softwares/miniconda3/envs/datacomp/lib/python3.10/site-packages/urllib3/connectionpool.py", line 1042, in _validate_conn
+    conn.connect()
+  File "/home/leobaro/softwares/miniconda3/envs/datacomp/lib/python3.10/site-packages/urllib3/connection.py", line 358, in connect
+    self.sock = conn = self._new_conn()
+  File "/home/leobaro/softwares/miniconda3/envs/datacomp/lib/python3.10/site-packages/urllib3/connection.py", line 186, in _new_conn
+    raise NewConnectionError(
+urllib3.exceptions.NewConnectionError: <urllib3.connection.HTTPSConnection object at 0x7e7311722260>: Failed to establish a new connection: [Errno -3] Temporary failure in name resolution
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/home/leobaro/softwares/miniconda3/envs/datacomp/lib/python3.10/site-packages/requests/adapters.py", line 489, in send
+    resp = conn.urlopen(
+  File "/home/leobaro/softwares/miniconda3/envs/datacomp/lib/python3.10/site-packages/urllib3/connectionpool.py", line 787, in urlopen
+    retries = retries.increment(
+  File "/home/leobaro/softwares/miniconda3/envs/datacomp/lib/python3.10/site-packages/urllib3/util/retry.py", line 592, in increment
+    raise MaxRetryError(_pool, url, error or ResponseError(cause))
+urllib3.exceptions.MaxRetryError: HTTPSConnectionPool(host='api.wandb.ai', port=443): Max retries exceeded with url: /graphql (Caused by NewConnectionError('<urllib3.connection.HTTPSConnection object at 0x7e7311722260>: Failed to establish a new connection: [Errno -3] Temporary failure in name resolution'))
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/home/leobaro/softwares/miniconda3/envs/datacomp/lib/python3.10/site-packages/wandb/sdk/lib/retry.py", line 108, in __call__
+    result = self._call_fn(*args, **kwargs)
+  File "/home/leobaro/softwares/miniconda3/envs/datacomp/lib/python3.10/site-packages/wandb/sdk/internal/internal_api.py", line 158, in execute
+    return self.client.execute(*args, **kwargs)
+  File "/home/leobaro/softwares/miniconda3/envs/datacomp/lib/python3.10/site-packages/wandb/vendor/gql-0.2.0/wandb_gql/client.py", line 52, in execute
+    result = self._get_result(document, *args, **kwargs)
+  File "/home/leobaro/softwares/miniconda3/envs/datacomp/lib/python3.10/site-packages/wandb/vendor/gql-0.2.0/wandb_gql/client.py", line 60, in _get_result
+    return self.transport.execute(document, *args, **kwargs)
+  File "/home/leobaro/softwares/miniconda3/envs/datacomp/lib/python3.10/site-packages/wandb/vendor/gql-0.2.0/wandb_gql/transport/requests.py", line 38, in execute
+    request = requests.post(self.url, **post_args)
+  File "/home/leobaro/softwares/miniconda3/envs/datacomp/lib/python3.10/site-packages/requests/api.py", line 115, in post
+    return request("post", url, data=data, json=json, **kwargs)
+  File "/home/leobaro/softwares/miniconda3/envs/datacomp/lib/python3.10/site-packages/requests/api.py", line 59, in request
+    return session.request(method=method, url=url, **kwargs)
+  File "/home/leobaro/softwares/miniconda3/envs/datacomp/lib/python3.10/site-packages/requests/sessions.py", line 587, in request
+    resp = self.send(prep, **send_kwargs)
+  File "/home/leobaro/softwares/miniconda3/envs/datacomp/lib/python3.10/site-packages/requests/sessions.py", line 701, in send
+    r = adapter.send(request, **kwargs)
+  File "/home/leobaro/softwares/miniconda3/envs/datacomp/lib/python3.10/site-packages/requests/adapters.py", line 565, in send
+    raise ConnectionError(e, request=request)
+requests.exceptions.ConnectionError: HTTPSConnectionPool(host='api.wandb.ai', port=443): Max retries exceeded with url: /graphql (Caused by NewConnectionError('<urllib3.connection.HTTPSConnection object at 0x7e7311722260>: Failed to establish a new connection: [Errno -3] Temporary failure in name resolution'))
+2024-12-23 20:02:56,577 INFO    MainThread:34567 [internal.py:handle_exit():80] Internal process exited

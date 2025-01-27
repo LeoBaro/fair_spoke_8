@@ -1,0 +1,22 @@
+[project]
+name = "spoke8leonardo"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "Leonardo Baroncelli", email = "leonardo.baroncelli26@gmail.com" }
+]
+requires-python = ">=3.10"
+dependencies = [
+    "fastparquet>=2024.11.0",
+    "huggingface-hub==0.13.4",
+    "img2dataset>=1.45.0",
+    "ipykernel>=6.29.5",
+    "jupyterlab>=4.3.4",
+    "matplotlib>=3.10.0",
+    "pandas>=2.2.3",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
