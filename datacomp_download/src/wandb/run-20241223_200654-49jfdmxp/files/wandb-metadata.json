@@ -1,0 +1,37 @@
+{
+    "os": "Linux-6.8.0-49-generic-x86_64-with-glibc2.35",
+    "python": "3.10.8",
+    "heartbeatAt": "2024-12-23T19:07:00.321508",
+    "startedAt": "2024-12-23T19:06:54.423567",
+    "docker": null,
+    "gpu": "NVIDIA RTX A5500 Laptop GPU",
+    "gpu_count": 1,
+    "cpu_count": 24,
+    "cuda": null,
+    "args": [
+        "--overwrite_metadata",
+        "--scale",
+        "small",
+        "--data_dir",
+        "/home/leobaro/Downloads/datasets/web/datacomp",
+        "--processes_count",
+        "4",
+        "--thread_count",
+        "8",
+        "--retries",
+        "3",
+        "--enable_wandb"
+    ],
+    "state": "running",
+    "program": "/home/leobaro/workspace/labs/fair_spoke_8/fair_spoke_8_leonardo/scripts/download_upstream.py",
+    "codePath": "fair_spoke_8_leonardo/scripts/download_upstream.py",
+    "git": {
+        "remote": "git@github.com:LeoBaro/fair_spoke_8.git",
+        "commit": "86e59053322ee997693e48c9d0453b7319c7787d"
+    },
+    "email": "leonardo.baroncelli26@gmail.com",
+    "root": "/home/leobaro/workspace/labs/fair_spoke_8",
+    "host": "fury",
+    "username": "leobaro",
+    "executable": "/home/leobaro/softwares/miniconda3/envs/datacomp/bin/python"
+}

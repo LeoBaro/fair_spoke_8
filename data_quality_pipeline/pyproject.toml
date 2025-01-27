@@ -7,14 +7,7 @@ authors = [
     { name = "Leonardo Baroncelli", email = "leonardo.baroncelli26@gmail.com" }
 ]
 requires-python = ">=3.10"
-dependencies = []
-
-[build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
-
-[dependency-groups]
-pipeline = [
+dependencies = [
     "debugpy==1.8.0",
     "diffusers>=0.23.1",
     "numpy<2",
@@ -22,12 +15,8 @@ pipeline = [
     "ray[data,default]>=2.40.0",
     "transformers>=4.29.0",
 ]
-download = [
-    "fastparquet>=2024.11.0",
-    "huggingface-hub==0.13.4",
-    "img2dataset>=1.45.0",
-    "ipykernel>=6.29.5",
-    "jupyterlab>=4.3.4",
-    "matplotlib>=3.10.0",
-    "pandas>=2.2.3",
-]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
