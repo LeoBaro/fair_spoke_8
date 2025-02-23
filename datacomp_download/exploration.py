@@ -5,7 +5,6 @@ import pandas as pd
 
 parquet_file = ParquetFile("/home/leobaro/Downloads/datasets/web/datacomp/shards/00000000.parquet")
 print(parquet_file.columns)
-breakpoint()
 
 
 path = Path("/home/leobaro/Downloads/datasets/web/datacomp/metadata")

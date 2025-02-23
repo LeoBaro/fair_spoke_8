@@ -1,24 +1,18 @@
-import argparse
-import os
-import re
-import shutil
+import re, shutil, argparse
 from pathlib import Path
 
 import img2dataset
-from cloudpathlib import CloudPath
 from huggingface_hub import snapshot_download
 
 from scale_configs import available_scales
 
 
 def path_or_cloudpath(s):
-    if re.match(r"^\w+://", s):
-        return CloudPath(s)
     return Path(s)
 
 
 def cleanup_dir(path):
-    assert isinstance(path, Path) or isinstance(path, CloudPath)
+    assert isinstance(path, Path) or isinstance(path)
     if isinstance(path, Path):
         shutil.rmtree(path)
     else:
@@ -172,10 +166,10 @@ if __name__ == "__main__":
 
         print(f"Downloading metadata to {metadata_dir}...")
 
-        cache_dir = metadata_dir.parent / f"hf"
+        cache_dir = metadata_dir.parent / "hf"
         hf_snapshot_args = dict(
             repo_id=hf_repo,
-            allow_patterns=f"*.parquet",
+            allow_patterns="*.parquet",
             local_dir=metadata_dir,
             cache_dir=cache_dir,
             local_dir_use_symlinks=False,
