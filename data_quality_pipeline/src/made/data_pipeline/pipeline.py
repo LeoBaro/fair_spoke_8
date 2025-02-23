@@ -1,14 +1,14 @@
 import argparse
 from pathlib import Path
 import ray
-#from spoke8leonardo.data_pipeline.steps.unimodal_language import filter_caption_length
-#from spoke8leonardo.data_pipeline.steps.unimodal_vision import filter_image_aspect_ratio
-#from spoke8leonardo.data_pipeline.steps.multimodal import (
+#from made.data_pipeline.steps.unimodal_language import filter_caption_length
+#from made.data_pipeline.steps.unimodal_vision import filter_image_aspect_ratio
+#from made.data_pipeline.steps.multimodal import (
 #    compute_clip_score,
 #    recover_caption_with_llava,
 #    recover_image_with_diffusion
 #)
-from spoke8leonardo.data_pipeline.config import Config
+from made.data_pipeline.config import Config
 
 def cli():
     parser = argparse.ArgumentParser()

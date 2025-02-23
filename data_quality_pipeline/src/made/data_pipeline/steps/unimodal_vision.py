@@ -1,6 +1,6 @@
 import ray
 from PIL import Image
-from spoke8leonardo.data_pipeline.config import Config
+from made.data_pipeline.config import Config
 
 @ray.remote
 def filter_image_aspect_ratio(batch):

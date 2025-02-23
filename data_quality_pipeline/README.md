@@ -9,7 +9,7 @@ git clone https://${GITHUB_USER}:${GITHUB_TOKEN}:@github.com/${GITHUB_REPOSITORY
 
 This project has been setup with uv
 ```bash
-uv init --lib --name spoke8leonardo --build-backend hatch
+uv init --lib --name made --build-backend hatch
 ```
 To get started:
 ```bash

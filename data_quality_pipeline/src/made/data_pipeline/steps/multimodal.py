@@ -3,7 +3,7 @@ from transformers import CLIPProcessor, CLIPModel
 from transformers import AutoProcessor, AutoModelForImageTextToText
 from diffusers import StableDiffusionPipeline
 
-from spoke8leonardo.data_pipeline.config import Config
+from made.data_pipeline.config import Config
 from PIL import Image
 
 @ray.remote

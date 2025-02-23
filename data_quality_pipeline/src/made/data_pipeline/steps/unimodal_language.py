@@ -1,5 +1,5 @@
 import ray
-from spoke8leonardo.data_pipeline.config import Config
+from made.data_pipeline.config import Config
 
 @ray.remote
 def filter_caption_length(batch):
