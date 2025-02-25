@@ -1,8 +1,25 @@
+infrastructure:
+  num_nodes: 2
+  num_workers: 8 
+  webdataset: /home/leobaro/Downloads/datasets/web/datacomp
+  enable_timing: true
+
 unimodal:
-  batch_size: 32
+  batch_size: 4000
+
   caption_min_length: 10
   caption_max_length: 100
+
+  lang_detection_model_path: models/lid.176.bin
+  lang_detection_score_threshold: 0.7
+  lang_detection_language: en
+
+  tagging_model_path: models/blabla.bin
+  good_captions_pos_distribution_path: models/blabla.pickle
+
   aspect_ratio_threshold: 3.0
+
+
 
 multimodal:
   batch_size: 32
@@ -13,6 +30,3 @@ multimodal:
   diffusion_model: ""
   clip_score_threshold: 0.5
 
-infrastructure:
-  num_nodes: 10
-  webdataset: /home/leobaro/Downloads/datasets/web/datacomp

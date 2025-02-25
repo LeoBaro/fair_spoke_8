@@ -2,3 +2,4 @@
 *.egg-info
 *.ipynb_checkpoints
 **/wandb
+test/data/*
