@@ -21,6 +21,7 @@ def data_path():
 def tar_files(data_path):
     return sorted([str(data_path/s) for s in Path(data_path).glob("*.tar")])
 
+
 @ray.remote
 def post_mortem(x):
     x += 1

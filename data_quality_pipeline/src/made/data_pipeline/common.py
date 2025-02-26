@@ -1,5 +1,6 @@
-import yaml
-from pathlib import Path
+
+import ray
+
 class Singleton(type):  
     _instances = {}
     def __call__(cls, *args, **kwargs):
@@ -13,11 +14,3 @@ class DictWrapper:
         for key, value in dictionary.items():
             setattr(self, key, DictWrapper(value) if isinstance(value, dict) else value)
 
-class Config(metaclass=Singleton):
-    def __init__(self, config_path: str = None):
-        if config_path is None:
-            config_path = Path(__file__).parent.parent / "config.yaml"
-        with open(config_path, "r", encoding="utf-8") as file:
-            self._config = yaml.safe_load(file)
-        for key, value in self._config.items():
-            setattr(self, key, DictWrapper(value) if isinstance(value, dict) else value)

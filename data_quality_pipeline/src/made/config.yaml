@@ -3,6 +3,8 @@ infrastructure:
   num_workers: 8 
   webdataset: /home/leobaro/Downloads/datasets/web/datacomp
   enable_timing: true
+  enable_metrics: true
+  log_folder: /home/leobaro/workspace/labs/fair_spoke_8/data_quality_pipeline/logs
 
 unimodal:
   batch_size: 4000
@@ -17,8 +19,8 @@ unimodal:
   tagging_model_path: models/blabla.bin
   good_captions_pos_distribution_path: models/blabla.pickle
 
-  aspect_ratio_threshold: 3.0
-
+  image_min_aspect_ratio: 0.8
+  image_max_aspect_ratio: 1.8
 
 
 multimodal:

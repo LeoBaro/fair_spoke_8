@@ -45,3 +45,116 @@ uv add <name>
     '__url__': '/home/leobaro/Downloads/datasets/web/datacomp/shards/00000000.tar'
 }
 ```
+
+
+# Using `img2dataset` and Choosing Image Size for CLIP Training  
+
+## **Understanding `resize_mode` in `img2dataset`**  
+The `resize_mode` parameter controls how images are resized when downloading them.  
+
+### **Default Value: `keep_ratio_largest`**  
+- Preserves the aspect ratio.  
+- Resizes the **largest side** (width or height) to match `image_size`.  
+- The smaller side scales proportionally (no cropping or padding).  
+
+### **Other Options:**  
+| Resize Mode          | Description |
+|----------------------|-------------|
+| **`no`**            | No resizing. |
+| **`border`**        | Resizes to `image_size × image_size` with padding. |
+| **`keep_ratio`**    | The **smallest side** is resized to `image_size`, making the other side larger. |
+| **`keep_ratio_largest`** (default) | The **largest side** is resized to `image_size`, making the other side smaller. |
+| **`center_crop`**   | Crops the largest side to make the image square (`image_size × image_size`). |
+
+---
+
+## **Best Image Size for Training CLIP**  
+The ideal image size depends on compute resources and the CLIP model architecture.  
+
+### **Commonly Used Image Sizes:**  
+1. **224×224 (Standard, Efficient)**
+   - Used in OpenAI’s original CLIP.
+   - Works well with **ViT and ResNet-based models**.
+   - Fast and memory-efficient.  
+
+2. **336×336 (More Detail, Slightly Heavier)**
+   - Used in some CLIP variants.
+   - Captures finer details, improving accuracy.  
+
+3. **448×448 or Higher (High-Resolution)**
+   - Useful for **large ViT models** (e.g., ViT-L/14).
+   - Computationally expensive but **better for detailed tasks**.  
+
+### **Trade-Offs Between Sizes:**
+| Image Size | Pros | Cons |
+|------------|------|------|
+| **224×224** | Efficient, widely used | May lose fine details |
+| **336×336** | More detail, slightly better accuracy | Higher compute/memory cost |
+| **448×448** | Best detail, useful for large models | Very slow, expensive |
+
+### **Recommendations:**
+- **For standard CLIP training:** **224×224** is the best balance.  
+- **If you have more resources:** Try **336×336**.  
+- **For large-scale models:** Consider **448×448**, but ensure **high-quality data and strong compute**.  
+
+---
+
+## **How Image Size Relates to Different CLIP Models**  
+CLIP models differ based on their **Vision Transformer (ViT) architecture**.  
+
+### **CLIP Model Variants:**
+- **ViT-B/32** → Base model, **32×32 patch size**.  
+- **ViT-B/16** → Base model, **16×16 patch size**.  
+- **ViT-L/14** → Large model, **14×14 patch size**.  
+- **ViT-H/14** → Huge model, **14×14 patch size**.  
+
+Since ViTs split images into patches, the **image size must be divisible by the patch size** for efficiency.  
+
+### **Recommended Image Sizes per CLIP Model:**
+| CLIP Model  | Patch Size | Best Image Size |
+|-------------|------------|----------------|
+| **ViT-B/32** | 32×32      | **224×224** (7×7 patches) |
+| **ViT-B/16** | 16×16      | **224×224 or 336×336** |
+| **ViT-L/14** | 14×14      | **336×336 or 448×448** |
+| **ViT-H/14** | 14×14      | **448×448** |
+
+### **Final Recommendations:**
+- **ViT-B/32 or ViT-B/16** → **224×224** is sufficient.  
+- **ViT-L/14** → **336×336** provides better accuracy.  
+- **ViT-H/14** → **448×448**, but requires **powerful compute**.  
+
+---
+
+## **Difference in Parameters Between CLIP Models**  
+Larger CLIP models have more parameters due to increased **layers, hidden dimensions, and attention heads**.  
+
+### **Parameter Counts for CLIP Models**
+| Model       | Layers (L) | Hidden Dim (D) | Attention Heads | Patch Size | **ViT Only** (M) | **ViT + Text Encoder** (M) |
+|------------|-----------|---------------|----------------|------------|------------------|------------------------------|
+| **ViT-B/32** | 12        | 768           | 12             | 32×32       | **86M**          | **149M**                      |
+| **ViT-B/16** | 12        | 768           | 12             | 16×16       | **86M**          | **149M**                      |
+| **ViT-L/14** | 24        | 1024          | 16             | 14×14       | **304M**         | **428M**                      |
+| **ViT-H/14** | 32        | 1280          | 16             | 14×14       | **632M**         | **831M**                      |
+
+### **Key Differences:**
+- **More Layers** → Deeper models capture **more complex features**.  
+- **Larger Hidden Dimensions** → Each layer processes **more information**.  
+- **More Attention Heads** → Improves **multi-head self-attention**.  
+- **Smaller Patch Size** → More patches = **higher-resolution representation**.  
+
+### **Computational Considerations:**
+| Model       | **Memory Usage** | **Training Speed** | **Performance** |
+|------------|-----------------|------------------|----------------|
+| **ViT-B/32** | Low             | Fast             | Good baseline |
+| **ViT-B/16** | Moderate        | Medium           | Better details |
+| **ViT-L/14** | High            | Slower           | Higher accuracy |
+| **ViT-H/14** | Very High       | Very Slow        | Best, but expensive |
+
+---
+
+## **Final Thoughts**
+- **For efficiency** → **ViT-B/32 with 224×224**.  
+- **For accuracy improvement** → **ViT-B/16 or ViT-L/14 with 336×336**.  
+- **For best performance** → **ViT-H/14 with 448×448**, but requires **high-end compute**.  
+
+Would you like help setting up your `img2dataset` config for a specific CLIP model? 🚀  

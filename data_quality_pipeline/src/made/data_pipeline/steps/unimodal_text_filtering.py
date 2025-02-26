@@ -1,19 +1,25 @@
 from pathlib import Path
 
-from made.data_pipeline.data.datacomp_handler import decode_webdataset
-from made.data_pipeline.config import Config
-from made.paths import MADE_PATH
-from made.data_pipeline.utils import get_time
-
 import ray
 import fasttext
 import numpy as np
 from numpy.typing import NDArray
 
+from made.config import Config
+from made.data_pipeline.metrics.metrics_decorators import get_time
+from made.data_pipeline.metrics.metrics_store import MetricsStore
+from made.data_pipeline.metrics.utils import send_metrics_central_collector
+from made.data_pipeline.utils import apply_filter_mask
+from made.data_pipeline.data.datacomp_handler import decode_webdataset, get_next_batch
+from made.paths import MADE_PATH
+
 @ray.remote
 def ray_unimodal_text_filtering(tar_files: list[str | Path]):
-    return unimodal_text_filtering(tar_files)
+    results = unimodal_text_filtering(tar_files)
+    send_metrics_central_collector()
+    return results
 
+@get_time
 def unimodal_text_filtering(tar_files: list[str | Path]):
     """
     This is the first step of the data quality pipeline, hence it gets the data directly from the tar files.
@@ -31,12 +37,20 @@ def unimodal_text_filtering(tar_files: list[str | Path]):
     )   
     
     all_uids = []
+    sample_count = 0
+    batch_id = 0
+    dataset_iter = iter(dataset)
 
-    # The tar 0000000 of the first shard contains 10033 elements and the batch size is 12000, hence only one iteration is performed
-    for batch in dataset:
-
+    while True:
+        batch = get_next_batch(dataset_iter)
+        if batch is None:
+            break
+        
         uids = batch[0]
         captions = [sentence.strip().replace('\n', ' ') for sentence in batch[1]]
+        batch_id += 1
+        sample_count += len(uids)
+
 
         # ------------------------------------------- 
         # first step: filter by caption length
@@ -45,27 +59,29 @@ def unimodal_text_filtering(tar_files: list[str | Path]):
 
         # ------------------------------------------- 
         # second step: filter by language
-        filter_mask: NDArray[np.bool_]
+        filter_mask: list[bool] 
         filter_mask = _get_filter_captions_by_language_mask(
             language_detection_model,
             captions,
             Config().unimodal.lang_detection_language,
             Config().unimodal.lang_detection_score_threshold
         )
-
-        ok_uids: NDArray[np.str_]
-        ok_captions: NDArray[np.str_]
-        uids_filtered: NDArray[np.str_]
-        captions_filtered: NDArray[np.str_]
-        ok_uids, ok_captions, uids_filtered, captions_filtered = _apply_filter_mask(uids, captions, filter_mask)
-        # _log_results() # TODO: implement this
-
+        ok_uids, ok_captions, uids_filtered, captions_filtered = apply_filter_mask(
+            uids, captions, filter_mask,
+            filter_name="_get_filter_captions_by_language_mask",
+            batch_id=batch_id
+        )
 
 
         # ------------------------------------------- 
         # third step: pos tags filtering
         # TODO: implement this
-        breakpoint()
+
+
+        # ------------------------------------------- 
+        # fourth step: text specificity filtering
+        # TODO: implement this
+
 
         all_uids.append(ok_uids)
 
@@ -84,32 +100,10 @@ def _get_filter_captions_by_language_mask(
     
     predictions, scores = model.predict(captions)
 
-    return np.array([
+    return [
         (pred == f"__label__{target_language}") and (score > threshold)
         for pred, score in zip(predictions, scores)
-    ], dtype=np.bool_)
-
-@get_time
-def _apply_filter_mask(
-        uids: list[str],
-        captions: list[str],
-        filter_mask: NDArray[np.bool_]
-    ) -> tuple[NDArray[np.str_], NDArray[np.str_]]:
-    """
-    Apply the filter mask to the uids and captions.
-    Return 4 arrays:    
-    - uids: the uids that passed the filter
-    - captions: the captions that passed the filter
-    - uids_filtered: the uids that did not pass the filter
-    - captions_filtered: the captions that did not pass the filter
-    """
-    return np.array(uids)[filter_mask], np.array(captions)[filter_mask], np.array(uids)[~filter_mask], np.array(captions)[~filter_mask]
-
-@get_time
-def _save_results(results: list[tuple[str, str]]):
-    with open(Config().unimodal.output_path, "w") as f:
-        for uid, caption in results:
-            f.write(f"{uid}\t{caption}\n")
+    ]
 
 def _validate_configuration():
     config = Config()
