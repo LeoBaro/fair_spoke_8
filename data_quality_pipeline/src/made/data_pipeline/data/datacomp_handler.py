@@ -6,8 +6,6 @@ from PIL import Image
 import imageio.v2 as imageio
 import webdataset as wds
 
-from made.data_pipeline.metrics.metrics_decorators import get_time
-
 def decode_image(value):
     return Image.fromarray(imageio.imread(io.BytesIO(value)))
 
@@ -17,7 +15,6 @@ def decode_uid(value):
 def decode_caption(value):
     return value.decode("utf-8").strip()
 
-@get_time
 def decode_webdataset(
         tar_files: list[str | Path],
         batch_size: int = 16,
@@ -48,7 +45,6 @@ def decode_webdataset(
         .batched(batch_size)
     )
 
-@get_time
 def get_next_batch(dataset_iter: iter):
     try:
         return next(dataset_iter)

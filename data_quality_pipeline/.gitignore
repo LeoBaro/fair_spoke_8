@@ -3,5 +3,8 @@
 *.ipynb_checkpoints
 **/wandb
 test/data/*
-logs/*
+test/out/*
+test/logs/*
+**/*.json
+ok_uids.npy
 **/*bin

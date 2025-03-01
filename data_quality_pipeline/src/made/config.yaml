@@ -4,7 +4,7 @@ infrastructure:
   webdataset: /home/leobaro/Downloads/datasets/web/datacomp
   enable_timing: true
   enable_metrics: true
-  log_folder: /home/leobaro/workspace/labs/fair_spoke_8/data_quality_pipeline/logs
+  logging_level: DEBUG
 
 unimodal:
   batch_size: 4000

@@ -1,28 +1,28 @@
 from pathlib import Path
-
+import logging
 import ray
 import numpy as np
 from numpy.typing import NDArray
 from PIL import Image
+from itertools import chain
 
 from made.config import Config
-from made.data_pipeline.metrics.metrics_decorators import get_time
 from made.data_pipeline.metrics.metrics_store import MetricsStore
-from made.data_pipeline.metrics.utils import send_metrics_central_collector
-from made.data_pipeline.utils import apply_filter_mask
+from made.data_pipeline.steps.base import apply_filtering_step
 from made.data_pipeline.data.datacomp_handler import decode_webdataset, get_next_batch
 
 @ray.remote
-def ray_unimodal_vision_filtering(tar_files: list[str | Path]):
-    results = unimodal_vision_filtering(tar_files)
-    send_metrics_central_collector()
-    return results
+def ray_unimodal_vision_filtering(tar_files: list[str | Path], log_folder: Path):
+    return unimodal_vision_filtering(tar_files, log_folder)
 
-@get_time
-def unimodal_vision_filtering(tar_files: list[str | Path]):
+def unimodal_vision_filtering(tar_files: list[str | Path], log_folder: Path):
+    _ = MetricsStore()
+    logger = logging.getLogger("unimodal_vision_filtering")
 
+    logger.info("Validating configuration")
     _validate_configuration()    
     
+    logger.info("Decoding webdataset")
     dataset = decode_webdataset(
         tar_files,
         get_images=True,
@@ -30,6 +30,7 @@ def unimodal_vision_filtering(tar_files: list[str | Path]):
         batch_size=Config().unimodal.batch_size
     )   
     
+    logger.info("Iterating over dataset")
     all_uids = []
     sample_count = 0
     batch_id = 0
@@ -39,25 +40,36 @@ def unimodal_vision_filtering(tar_files: list[str | Path]):
         batch = get_next_batch(dataset_iter)
         if batch is None:
             break
-        
-        uids = batch[0]
-        images = batch[1]
-        batch_id += 1
-        sample_count += len(uids)
 
-        # ------------------------------------------- 
+        batch_id += 1
+        sample_count += len(batch[0])
+
+        # ------------------------------------------------------------------------ 
         # first step: filter by aspect ratio
-        filter_mask: list[bool]
-        filter_mask = _get_images_by_aspect_ratio_filter_mask(
-            images,
-            Config().unimodal.image_min_aspect_ratio,
-            Config().unimodal.image_max_aspect_ratio
+        ok_uids, ok_samples, uids_filtered, samples_filtered = apply_filtering_step(
+            filter_name=_get_images_by_aspect_ratio_filter_mask,
+            batch_id=batch_id,
+            uids=batch[0],
+            samples=batch[1],
+            parameters = {
+                "image_min_aspect_ratio": Config().unimodal.image_min_aspect_ratio,
+                "image_max_aspect_ratio": Config().unimodal.image_max_aspect_ratio
+            }
         )
-        ok_uids, ok_images, uids_filtered, images_filtered = apply_filter_mask(
-            uids, images, filter_mask,
-            filter_name="_get_images_by_aspect_ratio_filter_mask",
-            batch_id=batch_id
-        )
+
+
+
+        # filter_mask: list[bool]
+        # filter_mask = _get_images_by_aspect_ratio_filter_mask(
+        #     images,
+        #     Config().unimodal.image_min_aspect_ratio,
+        #     Config().unimodal.image_max_aspect_ratio
+        # )
+        # ok_uids, ok_images, uids_filtered, images_filtered = apply_filter_mask(
+        #     uids, images, filter_mask,
+        #     filter_name="_get_images_by_aspect_ratio_filter_mask",
+        #     batch_id=batch_id
+        # )
 
 
         # ------------------------------------------- 
@@ -72,12 +84,13 @@ def unimodal_vision_filtering(tar_files: list[str | Path]):
 
         all_uids.append(ok_uids)
 
+    logger.info("Concatenating uids")
+    all_uids = list(chain.from_iterable(all_uids))
 
-    all_uids = np.concatenate(all_uids)
-
+    MetricsStore().save_to_file(log_folder)
     return all_uids
 
-@get_time
+
 def _get_images_by_aspect_ratio_filter_mask(
         images: list[Image.Image],
         image_min_aspect_ratio: float,

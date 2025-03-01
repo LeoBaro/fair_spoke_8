@@ -1,41 +1,38 @@
 from pathlib import Path
-
 import ray
+import logging
 import fasttext
-import numpy as np
-from numpy.typing import NDArray
+from itertools import chain
 
 from made.config import Config
-from made.data_pipeline.metrics.metrics_decorators import get_time
-from made.data_pipeline.metrics.metrics_store import MetricsStore
-from made.data_pipeline.metrics.utils import send_metrics_central_collector
-from made.data_pipeline.utils import apply_filter_mask
-from made.data_pipeline.data.datacomp_handler import decode_webdataset, get_next_batch
 from made.paths import MADE_PATH
+from made.data_pipeline.metrics.metrics_store import MetricsStore
+from made.data_pipeline.steps.base import apply_filtering_step
+from made.data_pipeline.data.datacomp_handler import decode_webdataset, get_next_batch
 
 @ray.remote
-def ray_unimodal_text_filtering(tar_files: list[str | Path]):
-    results = unimodal_text_filtering(tar_files)
-    send_metrics_central_collector()
-    return results
+def ray_unimodal_text_filtering(tar_files: list[str | Path], log_folder: Path):
+    return unimodal_text_filtering(tar_files, log_folder)
 
-@get_time
-def unimodal_text_filtering(tar_files: list[str | Path]):
-    """
-    This is the first step of the data quality pipeline, hence it gets the data directly from the tar files.
-    """
+def unimodal_text_filtering(tar_files: list[str | Path], log_folder: Path):
+    _ = MetricsStore()
+    logger = logging.getLogger("unimodal_text_filtering")
+    
+    logger.info("Validating configuration")
     _validate_configuration()
-
-    language_detection_model = fasttext.load_model(str(MADE_PATH / Config().unimodal.lang_detection_model_path)) # TODO: cache model in a Ray Actor
     
+    # TODO: cache model in a Ray Actor
+    language_detection_model = fasttext.load_model(str(MADE_PATH / Config().unimodal.lang_detection_model_path)) 
     
+    logger.info("Decoding webdataset")
     dataset = decode_webdataset(
         tar_files,
         get_images=False,
         get_captions=True,
         batch_size=Config().unimodal.batch_size
     )   
-    
+
+    logger.info("Iterating over dataset")
     all_uids = []
     sample_count = 0
     batch_id = 0
@@ -46,10 +43,8 @@ def unimodal_text_filtering(tar_files: list[str | Path]):
         if batch is None:
             break
         
-        uids = batch[0]
-        captions = [sentence.strip().replace('\n', ' ') for sentence in batch[1]]
         batch_id += 1
-        sample_count += len(uids)
+        sample_count += len(batch[0])
 
 
         # ------------------------------------------- 
@@ -59,17 +54,16 @@ def unimodal_text_filtering(tar_files: list[str | Path]):
 
         # ------------------------------------------- 
         # second step: filter by language
-        filter_mask: list[bool] 
-        filter_mask = _get_filter_captions_by_language_mask(
-            language_detection_model,
-            captions,
-            Config().unimodal.lang_detection_language,
-            Config().unimodal.lang_detection_score_threshold
-        )
-        ok_uids, ok_captions, uids_filtered, captions_filtered = apply_filter_mask(
-            uids, captions, filter_mask,
-            filter_name="_get_filter_captions_by_language_mask",
-            batch_id=batch_id
+        ok_uids, ok_samples, uids_filtered, samples_filtered = apply_filtering_step(
+            filter_name=_get_filter_captions_by_language_mask,
+            batch_id=batch_id,
+            uids=batch[0],
+            samples=batch[1],
+            parameters = {
+                "model": language_detection_model,
+                "target_language": Config().unimodal.lang_detection_language,
+                "threshold": Config().unimodal.lang_detection_score_threshold
+            }
         )
 
 
@@ -85,19 +79,22 @@ def unimodal_text_filtering(tar_files: list[str | Path]):
 
         all_uids.append(ok_uids)
 
+    logger.info("Concatenating uids")
+    all_uids = list(chain.from_iterable(all_uids))
+    logger.info("Total samples processed: %s", sample_count)
 
-    all_uids = np.concatenate(all_uids)
-
+    MetricsStore().save_to_file(log_folder)
     return all_uids
 
-@get_time
 def _get_filter_captions_by_language_mask(
-        model: fasttext.FastText,
         captions: list[str],
+        model: fasttext.FastText,
         target_language: str,
         threshold: float
-    ) -> NDArray[np.bool_]:
+    ) -> list[bool]:
     
+    captions = [sentence.strip().replace('\n', ' ') for sentence in captions]
+
     predictions, scores = model.predict(captions)
 
     return [

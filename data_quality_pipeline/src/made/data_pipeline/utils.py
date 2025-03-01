@@ -1,61 +1,20 @@
 from typing import Any
+from pathlib import Path
 
 import ray
-
+import numpy as np
 from made.config import Config
 from made.data_pipeline.metrics.metrics_store import MetricsStore
-from made.data_pipeline.metrics.metrics_decorators import get_time
 
+def collect_tar_files(shards_path: list[str | Path]):
+    return sorted([str(s) for s in Path(shards_path).glob("*.tar")])
 
-@get_time
-def apply_filter_mask(
-        uids: list[str],
-        data: list[Any],
-        mask: list[bool],
-        filter_name: str = "unnamed_filter", 
-        batch_id: int = 0
-    ) -> tuple[list[str], list[Any], list[str], list[Any], int]:
-    """
-    Apply a filter mask to items and data, returning both kept and filtered items
-    
-    Args:
-        items: List of identifiers (e.g., UIDs)
-        data: List of data items (images or captions)
-        mask: Boolean mask for filtering
-        filter_name: Name of the filter for logging
-        batch_id: Batch identifier for logging
-        
-    Returns:
-        Tuple of (kept_items, kept_data, filtered_items, filtered_data)
-    """
-    kept_items = []
-    kept_data = []
-    filtered_items = []
-    filtered_data = []
-    
-    for item, d, m in zip(uids, data, mask):
-        if m:  # Keep this item
-            kept_items.append(item)
-            kept_data.append(d)
-        else:  # Filter out this item
-            filtered_items.append(item)
-            filtered_data.append(d)
+def get_worker_id():
+    return ray.get_runtime_context().get_worker_id() if ray.is_initialized() else "local"
 
-    # Log metrics for this filtering operation
-    input_count = len(uids)
-    output_count = len(kept_items)
-    elapsed_time = 0  # This function doesn't time itself
-    
-    MetricsStore().add_filter_metric(
-        filter_name,
-        batch_id,
-        input_count,
-        output_count,
-        elapsed_time,
-        {"filter_reason": filter_name}
-    )
-
-    return kept_items, kept_data, filtered_items, filtered_data
+def shutdown_ray():
+    if ray.is_initialized():
+        ray.shutdown()  
 
 def print_execution_stats():
     """Print execution statistics and filter metrics summaries"""
@@ -79,3 +38,18 @@ def print_execution_stats():
     print(f"\nMetrics saved to:")
     print(f"  Summary: {summary_path}")
     print(f"  Details: {details_path}")
+
+def save_uids(uids: list[str], output_folder: str | Path):
+    """
+    The format describing the subset of samples should be a numpy array of dtype 
+    numpy.dtype("u8,u8") (i.e. a structured array of pairs of unsigned 64-bit integers), 
+    with shape (subset_size,), containing a list of uids (128-bit hashes from the parquet 
+    files) in lexicographic sorted order, saved to disk in either npy format or 
+    memory-mapped format.    
+    """
+    output_folder = Path(output_folder)
+    output_folder.mkdir(parents=True, exist_ok=True)
+    out_filename = output_folder / "ok_uids.npy"
+    processed_uids = np.array([(int(uid[:16], 16), int(uid[16:32], 16)) for uid in uids], np.dtype("u8,u8"))
+    processed_uids.sort()
+    np.save(out_filename, processed_uids)    
