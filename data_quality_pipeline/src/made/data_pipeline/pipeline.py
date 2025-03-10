@@ -26,11 +26,11 @@ def run_pipeline(
 
     # Creating Ray actors (an actor is essentially a stateful worker)
     unimodal_text_filtering_actors = [
-        UnimodalTextFilter.remote() for _ in range(num_workers)
+        UnimodalTextFilter.remote(config_path) for _ in range(num_workers)
     ]    
 
     unimodal_vision_filtering_actors = [
-        UnimodalVisionFilter.remote() for _ in range(num_workers)
+        UnimodalVisionFilter.remote(config_path) for _ in range(num_workers)
     ]    
 
 
@@ -41,11 +41,11 @@ def run_pipeline(
 
     # Launch Ray tasks
     text_filtering_futures = [
-        actor.ray_unimodal_text_filtering.remote(tar_split, log_folder, config_path) for actor, tar_split in zip(unimodal_text_filtering_actors, tar_splits) if tar_split
+        actor.ray_unimodal_text_filtering.remote(tar_split, log_folder) for actor, tar_split in zip(unimodal_text_filtering_actors, tar_splits) if tar_split
     ]
 
     vision_filtering_futures = [
-        actor.ray_unimodal_vision_filtering.remote(tar_split, log_folder, config_path) for actor, tar_split in zip(unimodal_vision_filtering_actors, tar_splits) if tar_split
+        actor.ray_unimodal_vision_filtering.remote(tar_split, log_folder) for actor, tar_split in zip(unimodal_vision_filtering_actors, tar_splits) if tar_split
     ]
 
     unimodal_text_filtering_results = ray.get(text_filtering_futures)

@@ -7,6 +7,12 @@ class Singleton(type):
         if cls not in cls._instances:
             cls._instances[cls] = super(Singleton, cls).__call__(*args, **kwargs)
         return cls._instances[cls]
+    
+    @classmethod
+    def destroy_instance(cls, target_cls):
+        """Destroy the singleton instance of the specified class."""
+        if target_cls in cls._instances:
+            del cls._instances[target_cls]
 
 class DictWrapper:
     """Helper class to convert dictionary to object-like access."""

@@ -13,11 +13,11 @@ from made.data_pipeline.data.datacomp_handler import decode_webdataset, get_next
 
 @ray.remote
 class UnimodalTextFilter:
-    def __init__(self):
-        self.language_detection_model = fasttext.load_model(str(MADE_PATH / Config().unimodal.lang_detection_model_path))
+    def __init__(self, config_path: Path):
+        self.config = Config(config_path)
+        self.language_detection_model = fasttext.load_model(str(MADE_PATH / self.config.unimodal.lang_detection_model_path))
     
-    def ray_unimodal_text_filtering(self, tar_files: list[str | Path], log_folder: Path, config_path: Path):
-        _ = Config(config_path)
+    def ray_unimodal_text_filtering(self, tar_files: list[str | Path], log_folder: Path):
         _ = MetricsStore()
         return unimodal_text_filtering(self.language_detection_model, tar_files, log_folder)
 

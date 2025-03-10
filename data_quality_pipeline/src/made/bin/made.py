@@ -1,13 +1,15 @@
 import atexit
 import ray
 import logging
+import argparse
 from time import time
 
 from made.config import Config
 from made.data_pipeline.utils import collect_tar_files, save_uids, shutdown_ray
 from made.data_pipeline.pipeline import run_pipeline
+from made.data_pipeline.common import Singleton
 
-import argparse
+
 def cli():
     parser = argparse.ArgumentParser()
     parser.add_argument("--shards_path", required=True, nargs="+")
@@ -17,29 +19,35 @@ def cli():
     parser.add_argument("--config-path", type=str, required=False, default=None)
     return parser.parse_args()
 
-def connect_or_start_ray(args):
-    if args.ray_address:
-        print("Connecting to Ray at", args.ray_address)
+def connect_or_start_ray(ray_address, logging_level):
+    if ray_address:
+        print("Connecting to Ray at", ray_address)
         ray.init(
-            address=args.ray_address,
-            logging_level=getattr(logging, Config().infrastructure.logging_level),
+            address=ray_address,
+            logging_level=getattr(logging, logging_level),
             log_to_driver=True
         )
     else:
         print("Starting Ray locally")
         ray.init(
-            logging_level=getattr(logging, Config().infrastructure.logging_level),
+            logging_level=getattr(logging, logging_level),
             log_to_driver=True
         )
 
+def cleanup():
+    shutdown_ray()
+    Singleton.destroy_instance(Config)
+
 def main(args):
     config = Config(args.config_path)
-    connect_or_start_ray(args)
+
+    connect_or_start_ray(args.ray_address, Config().infrastructure.logging_level)
 
     #atexit.register(save_aggregated_metrics)
 
     logger = logging.getLogger("ray")
     logger.info("Starting pipeline")
+    logger.info("Num workers: %s", config.infrastructure.num_workers)
     
     s = time()
     ok_uids = run_pipeline(
@@ -56,8 +64,8 @@ def main(args):
         logger.info("Saving uids")
         save_uids(ok_uids, args.output_folder)
 
-    shutdown_ray()
-    
+    cleanup()
+
     return took
 
     # TODO: After creating a subset, you may invoke the resharder to build the subset shards 

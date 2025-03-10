@@ -19,11 +19,11 @@ def test_ray_unimodal_text_filtering(ray_init, ray_flag, tar_files, log_folder, 
     if not ray_flag:
         pytest.skip("Skipping Ray test because --ray flag was not provided.")    
     
-    unimodalTextFilter = UnimodalTextFilter.remote()
+    unimodalTextFilter = UnimodalTextFilter.remote(config_path)
 
     # single worker test 
     results = ray.get(
         [
-            unimodalTextFilter.ray_unimodal_text_filtering.remote(tar_files, log_folder, config_path)
+            unimodalTextFilter.ray_unimodal_text_filtering.remote(tar_files, log_folder)
         ]
     )

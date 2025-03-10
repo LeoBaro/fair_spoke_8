@@ -14,11 +14,10 @@ from made.data_pipeline.data.datacomp_handler import decode_webdataset, get_next
 
 @ray.remote
 class UnimodalVisionFilter:
-    def __init__(self):
-        pass
+    def __init__(self, config_path: Path):
+        self.config = Config(config_path)
 
-    def ray_unimodal_vision_filtering(self, tar_files: list[str | Path], log_folder: Path, config_path: Path):
-        _ = Config(config_path)
+    def ray_unimodal_vision_filtering(self, tar_files: list[str | Path], log_folder: Path):
         _ = MetricsStore()
         return unimodal_vision_filtering(tar_files, log_folder)
 
