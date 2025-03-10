@@ -12,11 +12,16 @@ from made.data_pipeline.metrics.metrics_store import MetricsStore
 from made.data_pipeline.steps.base import apply_filtering_step
 from made.data_pipeline.data.datacomp_handler import decode_webdataset, get_next_batch
 
-@ray.remote#(num_gpus=1)
-def ray_unimodal_vision_filtering(tar_files: list[str | Path], log_folder: Path, config_path: Path):
-    _ = Config(config_path)
-    _ = MetricsStore()
-    return unimodal_vision_filtering(tar_files, log_folder)
+@ray.remote
+class UnimodalVisionFilter:
+    def __init__(self):
+        pass
+
+    def ray_unimodal_vision_filtering(self, tar_files: list[str | Path], log_folder: Path, config_path: Path):
+        _ = Config(config_path)
+        _ = MetricsStore()
+        return unimodal_vision_filtering(tar_files, log_folder)
+
 
 def unimodal_vision_filtering(tar_files: list[str | Path], log_folder: Path):
     logger = logging.getLogger("ray")

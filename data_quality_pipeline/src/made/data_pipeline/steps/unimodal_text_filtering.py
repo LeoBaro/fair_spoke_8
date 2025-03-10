@@ -11,20 +11,22 @@ from made.data_pipeline.metrics.metrics_store import MetricsStore
 from made.data_pipeline.steps.base import apply_filtering_step
 from made.data_pipeline.data.datacomp_handler import decode_webdataset, get_next_batch
 
-@ray.remote#(num_gpus=1)
-def ray_unimodal_text_filtering(tar_files: list[str | Path], log_folder: Path, config_path: Path):
-    _ = Config(config_path)
-    _ = MetricsStore()
-    return unimodal_text_filtering(tar_files, log_folder)
+@ray.remote
+class UnimodalTextFilter:
+    def __init__(self):
+        self.language_detection_model = fasttext.load_model(str(MADE_PATH / Config().unimodal.lang_detection_model_path))
+    
+    def ray_unimodal_text_filtering(self, tar_files: list[str | Path], log_folder: Path, config_path: Path):
+        _ = Config(config_path)
+        _ = MetricsStore()
+        return unimodal_text_filtering(self.language_detection_model, tar_files, log_folder)
 
-def unimodal_text_filtering(tar_files: list[str | Path], log_folder: Path):
+
+def unimodal_text_filtering(language_detection_model, tar_files: list[str | Path], log_folder: Path):
     logger = logging.getLogger("ray")
 
     # logger.info("Validating configuration")
     _validate_configuration()
-    
-    # TODO: cache model in a Ray Actor
-    language_detection_model = fasttext.load_model(str(MADE_PATH / Config().unimodal.lang_detection_model_path)) 
     
     # logger.info("Decoding webdataset")
     dataset = decode_webdataset(
