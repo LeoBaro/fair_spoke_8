@@ -14,19 +14,12 @@ dependencies = [
     "transformers>=4.29.0",
     "pytest",
     "debugpy==1.8.0",
-]
-
-[project.optional-dependencies]
-unimodal-text-filtering = [
     "nltk",
-    "fasttext>=0.9.2"
+    "fasttext>=0.9.2",
+    "Pillow>=11.1.0",
+    "imageio"
 ]
-unimodal-image-filtering = [
-    "pillow>=11.1.0"
-]
-multimodal-filtering = [
 
-]
 
 [build-system]
 requires = ["hatchling"]

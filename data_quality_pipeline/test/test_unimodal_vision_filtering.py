@@ -9,11 +9,12 @@ from made.data_pipeline.steps.unimodal_vision_filtering import (
 from made.config import Config
 from made.data_pipeline.metrics.metrics_store import MetricsStore
 
-@pytest.mark.skip("Skipping unimodal vision filtering")
-def test_unimodal_vision_filtering(tar_files):
+def test_unimodal_vision_filtering(tar_file, log_folder):
     logger = logging.getLogger("unimodal_vision_filtering")
-    results = unimodal_vision_filtering(tar_files)
+    results = unimodal_vision_filtering(tar_file, log_folder)
 
-def test_ray_unimodal_vision_filtering(ray_init, tar_files, log_folder):
-    results = ray.get([ray_unimodal_vision_filtering.remote(shards, log_folder) for shards in tar_files if shards])
+def test_ray_unimodal_vision_filtering(ray_init, ray_flag, tar_file, log_folder):
+    if not ray_flag:
+        pytest.skip("Skipping Ray test because --ray flag was not provided.")
+    results = ray.get([ray_unimodal_vision_filtering.remote(shards, log_folder) for shards in tar_file if shards])
 
