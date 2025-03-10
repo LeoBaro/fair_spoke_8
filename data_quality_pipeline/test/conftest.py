@@ -23,10 +23,6 @@ def log_folder():
 def tar_files(data_path):
     return sorted([str(data_path/s) for s in Path(data_path).glob("*.tar")])
 
-@pytest.fixture(scope="session")
-def tar_file(tar_files):
-    return tar_files[0:1] 
-
 def pytest_addoption(parser):
     parser.addoption(
         "--ray", action="store_true", default=False, help="Run Ray-based tests"
@@ -68,16 +64,15 @@ def post_mortem(x):
     return x
 
 @pytest.fixture(scope="session")
-def config_path(request, data_path):
+def config_path(request):
     config_file_for_tests_path = "/tmp/test.yaml"
     with open(config_file_for_tests_path, "w") as f:
         f.write(f"""
 infrastructure:
-    num_nodes: 1
     num_workers: 2 
-    webdataset: {str(data_path)} 
     enable_metrics: true
     logging_level: DEBUG
+    save_npy: true
 
 unimodal:
     batch_size: 20

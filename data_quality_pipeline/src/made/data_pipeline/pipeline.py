@@ -26,6 +26,7 @@ def run_pipeline(
 
     # Ensure each worker gets a subset of tar files
     shard_splits = [tar_files[i::num_workers] for i in range(num_workers)]
+    logger.info(f"Num. workers: {num_workers}. Shard split: {[len(s) for s in shard_splits]}")
 
     # Launch Ray tasks
     text_filtering_futures = [

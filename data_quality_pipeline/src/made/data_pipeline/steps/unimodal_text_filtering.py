@@ -3,6 +3,7 @@ import ray
 import logging
 import fasttext
 from itertools import chain
+from datetime import datetime
 
 from made.config import Config
 from made.paths import MADE_PATH
@@ -10,7 +11,7 @@ from made.data_pipeline.metrics.metrics_store import MetricsStore
 from made.data_pipeline.steps.base import apply_filtering_step
 from made.data_pipeline.data.datacomp_handler import decode_webdataset, get_next_batch
 
-@ray.remote(num_gpus=1)
+@ray.remote#(num_gpus=1)
 def ray_unimodal_text_filtering(tar_files: list[str | Path], log_folder: Path, config_path: Path):
     _ = Config(config_path)
     _ = MetricsStore()
@@ -19,13 +20,13 @@ def ray_unimodal_text_filtering(tar_files: list[str | Path], log_folder: Path, c
 def unimodal_text_filtering(tar_files: list[str | Path], log_folder: Path):
     logger = logging.getLogger("ray")
 
-    logger.info("Validating configuration")
+    # logger.info("Validating configuration")
     _validate_configuration()
     
     # TODO: cache model in a Ray Actor
     language_detection_model = fasttext.load_model(str(MADE_PATH / Config().unimodal.lang_detection_model_path)) 
     
-    logger.info("Decoding webdataset")
+    # logger.info("Decoding webdataset")
     dataset = decode_webdataset(
         tar_files,
         get_images=False,
@@ -33,7 +34,7 @@ def unimodal_text_filtering(tar_files: list[str | Path], log_folder: Path):
         batch_size=Config().unimodal.batch_size
     )   
 
-    logger.info("Iterating over dataset")
+    # logger.info("Iterating over dataset")
     all_uids = []
     sample_count = 0
     batch_id = 0
@@ -46,7 +47,7 @@ def unimodal_text_filtering(tar_files: list[str | Path], log_folder: Path):
         
         batch_id += 1
         sample_count += len(batch[0])
-        logger.info(f"Next batch {batch_id} / {sample_count}")
+        # logger.info(f"Next batch {batch_id} / {sample_count}")
 
 
         # ------------------------------------------- 
@@ -81,11 +82,12 @@ def unimodal_text_filtering(tar_files: list[str | Path], log_folder: Path):
 
         all_uids.append(ok_uids)
 
-    logger.info("Concatenating uids")
+    # logger.info("Concatenating uids")
     all_uids = list(chain.from_iterable(all_uids))
-    logger.info("Total samples processed: %s", sample_count)
+    logger.info(f"[{datetime.now()}] Total samples processed: %s", sample_count)
 
-    MetricsStore().save_to_file(log_folder)
+    if Config().infrastructure.enable_metrics:
+        MetricsStore().save_to_file(log_folder)
     return all_uids
 
 def _get_filter_captions_by_language_mask(
@@ -103,6 +105,7 @@ def _get_filter_captions_by_language_mask(
         (pred == f"__label__{target_language}") and (score > threshold)
         for pred, score in zip(predictions, scores)
     ]
+    
 
 def _validate_configuration():
     config = Config()

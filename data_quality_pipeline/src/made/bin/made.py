@@ -1,6 +1,7 @@
 import atexit
 import ray
 import logging
+from time import time
 
 from made.config import Config
 from made.data_pipeline.utils import collect_tar_files, save_uids, shutdown_ray
@@ -34,23 +35,30 @@ def connect_or_start_ray(args):
 def main(args):
     config = Config(args.config_path)
     connect_or_start_ray(args)
-    atexit.register(shutdown_ray)
+
     #atexit.register(save_aggregated_metrics)
 
     logger = logging.getLogger("ray")
     logger.info("Starting pipeline")
-
+    
+    s = time()
     ok_uids = run_pipeline(
         collect_tar_files(args.shards_path), 
         config.infrastructure.num_workers,
         args.log_folder,
         args.config_path
     )
+    took = time() - s
+    logger.info(f"Pipeline completed. Took {took:0.2f} seconds")
 
-    logger.info("Saving uids")
-    save_uids(ok_uids, args.output_folder)
 
-    logger.info("Pipeline completed")
+    if config.infrastructure.save_npy:
+        logger.info("Saving uids")
+        save_uids(ok_uids, args.output_folder)
+
+    shutdown_ray()
+    
+    return took
 
     # TODO: After creating a subset, you may invoke the resharder to build the subset shards 
     # From: https://github.com/mlfoundations/datacomp

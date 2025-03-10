@@ -15,4 +15,10 @@ def test_unimodal_text_filtering(tar_files, log_folder):
 def test_ray_unimodal_text_filtering(ray_init, ray_flag, tar_files, log_folder, config_path):
     if not ray_flag:
         pytest.skip("Skipping Ray test because --ray flag was not provided.")    
-    results = ray.get([ray_unimodal_text_filtering.remote(shards, log_folder, config_path) for shards in tar_files if shards])
+    
+    # single worker test 
+    results = ray.get(
+        [
+            ray_unimodal_text_filtering.remote(tar_files, log_folder, config_path)
+        ]
+    )
