@@ -12,7 +12,8 @@ from made.data_pipeline.steps.unimodal_vision_filtering import ray_unimodal_visi
 def run_pipeline(
         tar_files: list[str | Path], 
         num_workers: int,
-        log_folder: str |Path
+        log_folder: str | Path,
+        config_path: str | Path
     ) -> list[str]:
     """
     This pipeline will select the subset of samples that will be used for CLIP training.
@@ -20,7 +21,7 @@ def run_pipeline(
     parquets, and in the json files inside the .tar shards.
     """
 
-    logger = logging.getLogger("pipeline")
+    logger = logging.getLogger("ray")
     logger.info("Running pipeline")
 
     # Ensure each worker gets a subset of tar files
@@ -28,11 +29,11 @@ def run_pipeline(
 
     # Launch Ray tasks
     text_filtering_futures = [
-        ray_unimodal_text_filtering.remote(shards, log_folder) for shards in shard_splits if shards
+        ray_unimodal_text_filtering.remote(shards, log_folder, config_path) for shards in shard_splits if shards
     ]
 
     vision_filtering_futures = [
-        ray_unimodal_vision_filtering.remote(shards, log_folder) for shards in shard_splits if shards
+        ray_unimodal_vision_filtering.remote(shards, log_folder, config_path) for shards in shard_splits if shards
     ]
 
     unimodal_text_filtering_results = ray.get(text_filtering_futures)

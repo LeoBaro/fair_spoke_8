@@ -5,7 +5,11 @@ from made.bin.made import main
 from made.config import Config
 
 
-def test_ray_made_pipeline(configure_for_test, data_path, output_folder, log_folder, config_path):
+def test_ray_made_pipeline(ray_flag, data_path, output_folder, log_folder, config_path):
+
+    if not ray_flag:
+        pytest.skip("Skipping Ray test because --ray flag was not provided.") 
+    
     args = Namespace(   
         shards_path=data_path,
         ray_address=None,

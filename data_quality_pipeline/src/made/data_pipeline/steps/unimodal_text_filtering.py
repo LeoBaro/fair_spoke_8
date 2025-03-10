@@ -10,14 +10,15 @@ from made.data_pipeline.metrics.metrics_store import MetricsStore
 from made.data_pipeline.steps.base import apply_filtering_step
 from made.data_pipeline.data.datacomp_handler import decode_webdataset, get_next_batch
 
-@ray.remote
-def ray_unimodal_text_filtering(tar_files: list[str | Path], log_folder: Path):
+@ray.remote(num_gpus=1)
+def ray_unimodal_text_filtering(tar_files: list[str | Path], log_folder: Path, config_path: Path):
+    _ = Config(config_path)
+    _ = MetricsStore()
     return unimodal_text_filtering(tar_files, log_folder)
 
 def unimodal_text_filtering(tar_files: list[str | Path], log_folder: Path):
-    _ = MetricsStore()
-    logger = logging.getLogger("unimodal_text_filtering")
-    
+    logger = logging.getLogger("ray")
+
     logger.info("Validating configuration")
     _validate_configuration()
     
@@ -45,6 +46,7 @@ def unimodal_text_filtering(tar_files: list[str | Path], log_folder: Path):
         
         batch_id += 1
         sample_count += len(batch[0])
+        logger.info(f"Next batch {batch_id} / {sample_count}")
 
 
         # ------------------------------------------- 
