@@ -22,6 +22,9 @@ def decode_webdataset(
         get_captions: bool = True,
 ) -> wds.compat.WebDataset:
 
+    if len(tar_files) == 0:
+        raise ValueError("The tar files list is empty")
+    
     # always decode uid    
     decoders = [wds.handle_extension(".json", decode_uid)]
     keys = ["json"]
