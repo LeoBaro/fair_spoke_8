@@ -53,9 +53,11 @@ if __name__=='__main__':
 
     results = {}
 
-    num_workers_list = [1, 2, 4, 8, 16, 32] 
+    num_workers_list = [2, 4, 8, 16, 32] 
+    
     num_workers_baseline = num_workers_list[0] 
     batch_size = 500_000
+    batch_size = 500
 
     execution_times_by_worker = {}
     
@@ -89,126 +91,3 @@ if __name__=='__main__':
         
         print(f"  Average: {mean_time:.2f}s, Std Dev: {std_dev:.2f}s")
     
-
-
-    # Save results
-    with open(results_file, "w") as f:
-        # Convert numpy values to Python native types for JSON serialization
-        serializable_results = {}
-        for w, metrics in execution_times_by_worker.items():
-            serializable_results[str(w)] = {
-                "execution_times": [float(t) for t in metrics["execution_times"]],
-                "mean_time": float(metrics["mean_time"]),
-                "std_dev": float(metrics["std_dev"])
-            }
-        json.dump(serializable_results, f, indent=2)
-    
-    print(f"Results saved to {results_file}")
-    
-    # Prepare data for visualization
-    plot_data = []
-    for workers, metrics in execution_times_by_worker.items():
-        for i, time_value in enumerate(metrics["execution_times"]):
-            plot_data.append({
-                "Workers": workers,
-                "Execution": i+1,
-                "Execution Time (s)": time_value
-            })
-    
-    summary_data = []
-    for workers, metrics in execution_times_by_worker.items():
-        summary_data.append({
-            "Workers": workers,
-            "Mean Time (s)": metrics["mean_time"],
-            "Std Dev": metrics["std_dev"]
-        })
-    
-    df = pd.DataFrame(plot_data)
-    summary_df = pd.DataFrame(summary_data)
-    
-    # Create visualizations
-    plt.figure(figsize=(12, 15))
-    
-    # 1. Line plot: Workers vs Mean Execution Time
-    plt.subplot(3, 1, 1)
-    sns.lineplot(
-        data=summary_df, 
-        x="Workers", 
-        y="Mean Time (s)", 
-        marker='o'
-    )
-    plt.title("Effect of Worker Count on Execution Time")
-    plt.xscale("log", base=2)
-    plt.grid(True, which="both", linestyle="--", linewidth=0.5)
-    plt.ylabel("Execution Time (s)")
-    
-    # # 2. Bar plot with individual runs
-    # plt.subplot(3, 1, 2)
-    # sns.barplot(
-    #     data=df,
-    #     x="Workers",
-    #     y="Execution Time (s)",
-    #     hue="Execution",
-    #     errorbar=None
-    # )
-    # plt.title("Individual Run Times by Worker Count")
-    # plt.legend(title="Execution #")
-    
-    # 3. Speedup analysis
-    plt.subplot(3, 1, 3)
-    
-    # Calculate speedup relative to single worker
-    baseline_time = execution_times_by_worker[num_workers_baseline]["mean_time"]
-    speedup_data = []
-    
-    for workers in num_workers_list:
-        current_time = execution_times_by_worker[workers]["mean_time"]
-        speedup = baseline_time / current_time
-        efficiency = speedup / workers
-        speedup_data.append({
-            "Workers": workers,
-            "Speedup": speedup,
-            "Efficiency": efficiency * 100  # As percentage
-        })
-    
-    speedup_df = pd.DataFrame(speedup_data)
-    
-    # Twin axes for speedup and efficiency
-    ax1 = plt.gca()
-    ax2 = ax1.twinx()
-    
-    # Plot speedup
-    sns.lineplot(
-        data=speedup_df,
-        x="Workers",
-        y="Speedup",
-        marker='o',
-        color='blue',
-        ax=ax1
-    )
-    
-    # Plot ideal speedup
-    x = np.array(num_workers_list)
-    ax1.plot(x, x, 'k--', label="Ideal Speedup")
-    
-    # # Plot efficiency on secondary axis
-    # sns.lineplot(
-    #     data=speedup_df,
-    #     x="Workers",
-    #     y="Efficiency",
-    #     marker='s',
-    #     color='red',
-    #     ax=ax2
-    # )
-    
-    ax1.set_title("Speedup vs Number of Workers")
-    ax1.set_xlabel("Number of Workers")
-    ax1.set_ylabel("Speedup (relative to 1 worker)")
-    
-    ax1.grid(True, which="both", linestyle="--", linewidth=0.5)
-    ax1.legend(loc="upper left")
-    
-    plt.tight_layout()
-    plt.savefig(Path(__file__).parent / "worker_scaling_results.png")
-    
-    print("Visualizations saved to worker_scaling_results.png")
