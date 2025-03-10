@@ -16,12 +16,52 @@ To get started:
 uv python install 3.10
 uv venv
 ```
-
-
 To add dependencies:
 ```bash
 uv add <name> 
 ```
+
+## Ray
+
+### Interactive multi-node setup
+
+Obtain n nodes:
+```bash
+qsub -I -l select=2:ncpus=24:ngpus=4 -l place=scatter -q gpu
+```
+Start the ray cluster:
+```bash
+source start_ray_multimode.sh
+```
+Run the pipeline:
+```bash
+python src/made/bin/made.py --shards_path --ray-address --log-folder --output-folder --config-path
+```
+
+### Automatic multi-node setup
+```bash
+qsub -l select=2:ncpus=24:ngpus=4 -l place=scatter -q gpu start_ray_cluster_and_pipeline.sh
+```
+
+## Connecting to the Ray dashboard
+Get the dashboard port
+```python
+import ray
+context = ray.init()
+print(context.dashboard_url)
+```
+Make an ssh tunnel login node -- gpu node
+```bash
+ssh -N -L 8888:localhost:<rayport> <gpu-node-ip>
+```
+
+Make an ssh tunnel vdi -- login node
+```bash
+ssh -N -L 8888:localhost:8888 lbaroncelli@10.122.0.6
+```
+Go to: localhost:8888
+
+
 
 ## Ray webdataset loader
 ```bash
