@@ -4,7 +4,8 @@ version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
 authors = [
-    { name = "Leonardo Baroncelli", email = "leonardo.baroncelli.ext@leonardo.com" }
+    { name = "Leonardo Baroncelli", email = "leonardo.baroncelli.ext@leonardo.com" },
+    { name = "Francesco Bernardi", email = "francesco.bernardi01@leonardo.com" }
 ]
 requires-python = ">=3.10"
 dependencies = [
