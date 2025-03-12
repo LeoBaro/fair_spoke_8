@@ -19,21 +19,21 @@ class UnimodalTextFilter:
     
     def ray_unimodal_text_filtering(self, tar_files: list[str | Path], log_folder: Path):
         _ = MetricsStore()
-        return unimodal_text_filtering(self.language_detection_model, tar_files, log_folder)
+        return unimodal_text_filtering(self.language_detection_model, tar_files, log_folder, self.config)
 
 
-def unimodal_text_filtering(language_detection_model, tar_files: list[str | Path], log_folder: Path):
+def unimodal_text_filtering(language_detection_model, tar_files: list[str | Path], log_folder: Path, config: Config):
     logger = logging.getLogger("ray")
 
     # logger.info("Validating configuration")
-    _validate_configuration()
+    _validate_configuration(config)
     
     # logger.info("Decoding webdataset")
     dataset = decode_webdataset(
         tar_files,
         get_images=False,
         get_captions=True,
-        batch_size=Config().unimodal.batch_size
+        batch_size=config.unimodal.batch_size
     )   
 
     # logger.info("Iterating over dataset")
@@ -66,8 +66,8 @@ def unimodal_text_filtering(language_detection_model, tar_files: list[str | Path
             samples=batch[1],
             parameters = {
                 "model": language_detection_model,
-                "target_language": Config().unimodal.lang_detection_language,
-                "threshold": Config().unimodal.lang_detection_score_threshold
+                "target_language": config.unimodal.lang_detection_language,
+                "threshold": config.unimodal.lang_detection_score_threshold
             }
         )
 
@@ -88,7 +88,7 @@ def unimodal_text_filtering(language_detection_model, tar_files: list[str | Path
     all_uids = list(chain.from_iterable(all_uids))
     logger.info(f"[{datetime.now()}] Total samples processed: %s", sample_count)
 
-    if Config().infrastructure.enable_metrics:
+    if config.infrastructure.enable_metrics:
         MetricsStore().save_to_file(log_folder)
     return all_uids
 
@@ -109,8 +109,7 @@ def _get_filter_captions_by_language_mask(
     ]
     
 
-def _validate_configuration():
-    config = Config()
+def _validate_configuration(config: Config):
     if config.unimodal.lang_detection_language not in ["en", "it", "es"]:
         raise ValueError("The language detection language must be either 'en' or 'it' or 'es'")
     if config.unimodal.lang_detection_score_threshold < 0.1 or config.unimodal.lang_detection_score_threshold > 1.0:

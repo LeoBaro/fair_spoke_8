@@ -19,21 +19,21 @@ class UnimodalVisionFilter:
 
     def ray_unimodal_vision_filtering(self, tar_files: list[str | Path], log_folder: Path):
         _ = MetricsStore()
-        return unimodal_vision_filtering(tar_files, log_folder)
+        return unimodal_vision_filtering(tar_files, log_folder, self.config)
 
 
-def unimodal_vision_filtering(tar_files: list[str | Path], log_folder: Path):
+def unimodal_vision_filtering(tar_files: list[str | Path], log_folder: Path, config: Config):
     logger = logging.getLogger("ray")
 
     # logger.info("Validating configuration")
-    _validate_configuration()    
+    _validate_configuration(config)    
     
     # logger.info("Decoding webdataset")
     dataset = decode_webdataset(
         tar_files,
         get_images=True,
         get_captions=False,
-        batch_size=Config().unimodal.batch_size
+        batch_size=config.unimodal.batch_size
     )   
     
     # logger.info("Iterating over dataset")
@@ -59,8 +59,8 @@ def unimodal_vision_filtering(tar_files: list[str | Path], log_folder: Path):
             uids=batch[0],
             samples=batch[1],
             parameters = {
-                "image_min_aspect_ratio": Config().unimodal.image_min_aspect_ratio,
-                "image_max_aspect_ratio": Config().unimodal.image_max_aspect_ratio
+                "image_min_aspect_ratio": config.unimodal.image_min_aspect_ratio,
+                "image_max_aspect_ratio": config.unimodal.image_max_aspect_ratio
             }
         )
 
@@ -96,7 +96,7 @@ def unimodal_vision_filtering(tar_files: list[str | Path], log_folder: Path):
     all_uids = list(chain.from_iterable(all_uids))
     logger.info(f"[{datetime.now()}] Total samples processed: %s", sample_count)
 
-    if Config().infrastructure.enable_metrics:
+    if config.infrastructure.enable_metrics:
         MetricsStore().save_to_file(log_folder)
     return all_uids
 
@@ -114,7 +114,6 @@ def _get_images_by_aspect_ratio_filter_mask(
         for image in images
     ]
 
-def _validate_configuration():
-    config = Config()
+def _validate_configuration(config: Config):
     if config.unimodal.image_min_aspect_ratio < 0.0 or config.unimodal.image_min_aspect_ratio > 1.0:
         raise ValueError("The aspect ratio threshold must be between 0.0 and 1.0")
