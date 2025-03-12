@@ -9,8 +9,8 @@ from made.data_pipeline.steps.unimodal_vision_filtering import (
 from made.config import Config
 from made.data_pipeline.metrics.metrics_store import MetricsStore
 
-def test_unimodal_vision_filtering(tar_files, log_folder):
-    results = unimodal_vision_filtering(tar_files, log_folder)
+def test_unimodal_vision_filtering(tar_files, log_folder, config):
+    results = unimodal_vision_filtering(tar_files, log_folder, config)
 
 def test_ray_unimodal_vision_filtering(ray_init, ray_flag, tar_files, log_folder, config_path):
     if not ray_flag:

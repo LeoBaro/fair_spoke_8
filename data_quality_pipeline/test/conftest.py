@@ -94,3 +94,7 @@ unimodal:
 def set_test_config(config_path):
     _ = Config(config_path)
 
+@pytest.fixture(scope="session")
+def config(set_test_config):
+    return Config()
+

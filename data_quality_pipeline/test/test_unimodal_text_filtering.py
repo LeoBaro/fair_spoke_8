@@ -11,9 +11,10 @@ from made.data_pipeline.steps.unimodal_text_filtering import (
 from made.config import Config
 from made.data_pipeline.metrics.metrics_store import MetricsStore
 
-def test_unimodal_text_filtering(tar_files, log_folder):
-    language_detection_model = fasttext.load_model(str(MADE_PATH / Config().unimodal.lang_detection_model_path))
-    results = unimodal_text_filtering(language_detection_model, tar_files, log_folder)
+def test_unimodal_text_filtering(tar_files, log_folder, config):
+    language_detection_model = fasttext.load_model(str(MADE_PATH / config.unimodal.lang_detection_model_path))
+
+    results = unimodal_text_filtering(language_detection_model, tar_files, log_folder, config)
 
 def test_ray_unimodal_text_filtering(ray_init, ray_flag, tar_files, log_folder, config_path):
     if not ray_flag:
