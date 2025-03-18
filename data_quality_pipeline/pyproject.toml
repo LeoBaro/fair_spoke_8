@@ -18,7 +18,8 @@ dependencies = [
     "nltk",
     "fasttext>=0.9.2",
     "Pillow>=11.1.0",
-    "imageio"
+    "imageio",
+    "spacy>=3.8.4"
 ]
 
 
