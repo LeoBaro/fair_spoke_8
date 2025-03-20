@@ -69,12 +69,14 @@ def config_path(request):
     with open(config_file_for_tests_path, "w") as f:
         f.write(f"""
 infrastructure:
-  num_workers: 8 
+  num_workers: 2
   enable_metrics: true
   logging_level: DEBUG
   save_npy: true
 
 unimodal:
+  # ['same_input',  'classic']
+  pipeline_type: same_input
   batch_size: 4000
 
   caption_min_words: 2
@@ -86,7 +88,7 @@ unimodal:
   lang_detection_language: en
 
   tagging_model_path: en_core_web_trf
-  good_captions_pos_distribution_path: models/blabla.pickle
+  good_captions_pos_distribution_path: models/common_pos_patterns.txt
 
   image_min_aspect_ratio: 0.8
   image_max_aspect_ratio: 1.8
