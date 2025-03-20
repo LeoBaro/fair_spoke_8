@@ -1,5 +1,5 @@
 import pytest
-import logging  
+import logging
 import ray
 import fasttext
 import spacy
@@ -20,8 +20,19 @@ def test_unimodal_text_filtering(tar_files, log_folder, config):
     tagging_model = spacy.load(
         str(config.unimodal.tagging_model_path)
         )
-
-    results = unimodal_text_filtering(language_detection_model,tagging_model, tar_files, log_folder, config)
+    with open(
+        str(MADE_PATH / config.unimodal.good_captions_pos_distribution_path),
+        'r'
+    ) as file:
+        common_pos_patterns = [line.strip() for line in file.readlines()]
+    
+    results = unimodal_text_filtering(
+        language_detection_model,
+        tagging_model, 
+        common_pos_patterns,
+        tar_files, 
+        log_folder,
+        config)
 
 def test_ray_unimodal_text_filtering(ray_init, ray_flag, tar_files, log_folder, config_path):
     if not ray_flag:
