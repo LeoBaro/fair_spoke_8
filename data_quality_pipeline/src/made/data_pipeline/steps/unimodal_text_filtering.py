@@ -14,8 +14,6 @@ from made.data_pipeline.data.datacomp_handler import decode_webdataset, get_next
 
 @ray.remote
 class UnimodalTextFilter:
-    with open('/home/fbernardi/Documents/fair_spoke_8/data_quality_pipeline/test/data/common_pos_patterns.txt', 'r') as file:
-        common_pos_patterns = [line.strip() for line in file.readlines()]
 
     def __init__(self, config_path: Path):
         self.config = Config(config_path)
@@ -24,13 +22,19 @@ class UnimodalTextFilter:
             )
         self.tagging_model = spacy.load(
             str(MADE_PATH / self.config.unimodal.tagging_model_path)
-        )
+            )
+        with open(
+            str(MADE_PATH / self.config.unimodal.good_captions_pos_distribution_path),
+            'r'
+            ) as file:
+            self.common_pos_patterns = [line.strip() for line in file.readlines()]
     
     def ray_unimodal_text_filtering(self, tar_files: list[str | Path], log_folder: Path):
         _ = MetricsStore()
         return unimodal_text_filtering(
             self.language_detection_model,
             self.tagging_model,
+            self.common_pos_patterns,
             tar_files, 
             log_folder, 
             self.config
@@ -40,6 +44,7 @@ class UnimodalTextFilter:
 def unimodal_text_filtering(
         language_detection_model,
         pos_tagging_model,
+        pos_distribution,
         tar_files: list[str | Path], 
         log_folder: Path, 
         config: Config
@@ -81,6 +86,7 @@ def unimodal_text_filtering(
             batch_id=batch_id,
             uids=batch[0],
             samples=batch[1],
+            pipeline_type= config.unimodal.pipeline_type,
             parameters = {
                 "min_words": config.unimodal.caption_min_words,
                 "min_chars": config.unimodal.caption_max_chars
@@ -92,8 +98,9 @@ def unimodal_text_filtering(
         ok_uids, ok_samples, uids_filtered, samples_filtered = apply_filtering_step(
             filter_name=_get_filter_captions_by_language_mask,
             batch_id=batch_id,
-            uids=batch[0],
-            samples=batch[1],
+            uids=ok_uids,
+            samples=ok_samples,
+            pipeline_type= config.unimodal.pipeline_type,
             parameters = {
                 "model": language_detection_model,
                 "target_language": config.unimodal.lang_detection_language,
@@ -107,11 +114,12 @@ def unimodal_text_filtering(
         ok_uids, ok_samples, uids_filtered, samples_filtered = apply_filtering_step(
             filter_name = _get_filter_captions_by_pos_tags_mask,
             batch_id=batch_id,
-            uids=batch[0],
-            samples=batch[1],
+            uids=ok_uids,
+            samples=ok_samples,
+            pipeline_type= config.unimodal.pipeline_type,
             parameters = {
                 "model": pos_tagging_model,
-                "target_pos_tags": UnimodalTextFilter.common_pos_patterns
+                "target_pos_tags": pos_distribution
             }
         )
 
@@ -187,7 +195,6 @@ def _get_filter_captions_by_pos_tags_mask(
         mask.append(is_good_pos)
     
     return mask
-
 
 def _validate_configuration(config: Config):
     if config.unimodal.lang_detection_language not in ["en", "it", "es"]:
