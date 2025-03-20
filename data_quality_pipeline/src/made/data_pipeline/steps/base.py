@@ -7,10 +7,38 @@ def apply_filtering_step(
         batch_id: int,
         uids: list[str],
         samples: list[Any],
+        pipeline_type: str,
         parameters: dict[str, Any]
     ) -> tuple[list[str], list[Any], list[str], list[Any]]:
     """
-    Apply a filtering step to the input data, return the filtered data and save metrics.
+    Apply a filtering step to the input data, record metrics, and return filtered results.
+
+    This function executes the specified filter function on the provided samples using the
+    given parameters. It computes a filter mask by calling the filter function, applies the mask
+    to separate valid samples from those filtered out, and records filtering metrics (such as
+    elapsed time and counts) via the MetricsStore.
+
+    Args:
+        `filter_name (Callable)`: The filter function to apply to the samples.
+        `batch_id (int)`: Identifier for the current batch; used for logging metrics.
+        `uids (list[str])`: List of unique identifiers corresponding to each sample.
+        `samples (list[Any])`: List of samples to be filtered.
+        `pipeline_type (str)`: Pipeline mode; if set to `"same_input"`, the original samples are 
+                             returned as valid results and no samples are considered filtered out.
+                             If set to `"classic"`, the mask is applied to the samples
+                             and only the valid samples are returned.
+        `parameters (dict[str, Any])`: Dictionary of parameters used to configure the filter function.
+
+    Returns:
+        tuple:
+        - `list[str]`: Unique identifiers for the samples that passed the filter.
+        - `list[Any]`: The samples that passed the filter.
+        - `list[str]`: Unique identifiers for the samples that were filtered out.
+        - `list[Any]`: The samples that were filtered out.
+
+    Side Effects:
+        Records filtering metrics using MetricsStore, including the name of the filter function,
+        batch ID, total and passed sample counts, processing time, and the filter parameters.
     """
 
     start_time = time.time()
@@ -27,8 +55,15 @@ def apply_filtering_step(
         len(uids),
         len(ok_uids),
         elapsed_time,
+        pipeline_type,
         {"parameters": parameters}
     )
+
+    if pipeline_type == "same_input":
+        ok_uids = uids
+        ok_samples = samples
+        uids_filtered = []
+        samples_filtered = []
 
     return ok_uids, ok_samples, uids_filtered, samples_filtered
 
