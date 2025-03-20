@@ -5,6 +5,8 @@ infrastructure:
   save_npy: true
 
 unimodal:
+  # ['same_input',  'classic']
+  pipeline_type: same_input 
   batch_size: 4000
 
   caption_min_words: 2
@@ -16,7 +18,7 @@ unimodal:
   lang_detection_language: en
 
   tagging_model_path: en_core_web_trf
-  good_captions_pos_distribution_path: models/blabla.pickle
+  good_captions_pos_distribution_path: models/common_pos_patterns.txt
 
   image_min_aspect_ratio: 0.8
   image_max_aspect_ratio: 1.8
@@ -29,4 +31,3 @@ multimodal:
   caption_generator_model: "llava-hf/llava-v1.6-mistral-7b-hf"
   diffusion_model: ""
   clip_score_threshold: 0.5
-
