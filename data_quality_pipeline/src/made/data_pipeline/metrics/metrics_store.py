@@ -21,11 +21,13 @@ class MetricsStore(metaclass=Singleton):
             input_count: int,
             output_count: int,
             elapsed_time: float,
+            pipeline_type: str,
             extra_info: Optional[Dict] = None
         ):
         
         metric = {
             "worker_id": self.worker_id,
+            "pipeline_type": pipeline_type,
             "batch_id": batch_id,
             "timestamp": datetime.now().isoformat(),
             "input_count": input_count,
@@ -52,6 +54,7 @@ class MetricsStore(metaclass=Singleton):
             filter_rates = [m["filter_rate"] for m in metrics]
             times = [m["elapsed_time"] for m in metrics]
             
+            
             summary["filter_metrics"][func_name] = {
                 "total_input": sum(input_counts),
                 "total_output": sum(output_counts),
@@ -65,7 +68,9 @@ class MetricsStore(metaclass=Singleton):
                 "stddev_elapsed_time_seconds": round(statistics.stdev(times) if len(times) > 1 else 0.0, 5),
                 "min_elapsed_time_seconds": round(min(times), 5),
                 "max_elapsed_time_seconds": round(max(times), 5),
-                "calls": len(times)
+                "calls": len(times),
+                "parameters": metrics[0]['parameters'],
+                "pipeline_type": metrics[0]['pipeline_type']
             }
             
         return summary
@@ -75,16 +80,16 @@ class MetricsStore(metaclass=Singleton):
         output_path.mkdir(exist_ok=True, parents=True)
 
         # Create a timestamp-based filename
-        # timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         worker_suffix = self.worker_id.replace(":", "_")
         
         # Save summary
-        summary_path = output_path / f"metrics_summary_{worker_suffix}.json"
+        summary_path = output_path / f"metrics_summary_{worker_suffix}_{timestamp}.json"
         with open(summary_path, 'w', encoding="utf-8") as f:
             json.dump(self.get_summary(), f, indent=2)
             
         # Save detailed metrics
-        details_path = output_path / f"metrics_details_{worker_suffix}.json"
+        details_path = output_path / f"metrics_details_{worker_suffix}_{timestamp}.json"
         with open(details_path, 'w', encoding="utf-8") as f:
             json.dump({
                 "worker_id": self.worker_id,
