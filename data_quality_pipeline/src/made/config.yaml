@@ -23,6 +23,9 @@ unimodal:
   image_min_aspect_ratio: 0.8
   image_max_aspect_ratio: 1.8
 
+  specificity_threshold: 0.5           
+  curvature: 1.0    
+
 multimodal:
   batch_size: 32
   clip_processor: "openai/clip-vit-base-patch32"
