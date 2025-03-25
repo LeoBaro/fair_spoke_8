@@ -18,7 +18,7 @@ def test_unimodal_text_filtering(tar_files, log_folder, config):
         )
     spacy.require_gpu()
     tagging_model = spacy.load(
-        str(config.unimodal.tagging_model_path)
+        str(config.unimodal.tagging_model_name)
         )
     with open(
         str(MADE_PATH / config.unimodal.good_captions_pos_distribution_path),

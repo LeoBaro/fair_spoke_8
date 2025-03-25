@@ -20,9 +20,7 @@ class UnimodalTextFilter:
         self.language_detection_model = fasttext.load_model(
             str(MADE_PATH / self.config.unimodal.lang_detection_model_path)
             )
-        self.tagging_model = spacy.load(
-            str(MADE_PATH / self.config.unimodal.tagging_model_path)
-            )
+        self.tagging_model = spacy.load(self.config.unimodal.tagging_model_name)
         with open(
             str(MADE_PATH / self.config.unimodal.good_captions_pos_distribution_path),
             'r'
@@ -122,11 +120,6 @@ def unimodal_text_filtering(
                 "target_pos_tags": pos_distribution
             }
         )
-
-        # ------------------------------------------- 
-        # fourth step: text specificity filtering
-        # TODO: implement this
-
 
         all_uids.append(ok_uids)
 

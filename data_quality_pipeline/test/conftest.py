@@ -76,7 +76,6 @@ infrastructure:
   apply_filters: false
 
 unimodal:
-  # ['same_input',  'classic']
   batch_size: 4000
 
   caption_min_words: 2
@@ -87,7 +86,7 @@ unimodal:
   lang_detection_score_threshold: 0.7
   lang_detection_language: en
 
-  tagging_model_path: en_core_web_trf
+  tagging_model_name: en_core_web_trf
   good_captions_pos_distribution_path: models/common_pos_patterns.txt
 
   image_min_aspect_ratio: 0.8
@@ -105,11 +104,8 @@ multimodal:
 """)
     return config_file_for_tests_path
 
-@pytest.fixture(scope="session", autouse=True)
-def set_test_config(config_path):
-    _ = Config(config_path)
 
 @pytest.fixture(scope="session")
-def config(set_test_config):
-    return Config()
+def config(config_path):
+    return Config(config_path)
 
