@@ -86,7 +86,7 @@ def unimodal_text_filtering(
             batch_id=batch_id,
             uids=batch[0],
             samples=batch[1],
-            pipeline_type= config.unimodal.pipeline_type,
+            apply_filters= config.infrastructure.apply_filters,
             parameters = {
                 "min_words": config.unimodal.caption_min_words,
                 "min_chars": config.unimodal.caption_max_chars
@@ -100,7 +100,7 @@ def unimodal_text_filtering(
             batch_id=batch_id,
             uids=ok_uids,
             samples=ok_samples,
-            pipeline_type= config.unimodal.pipeline_type,
+            apply_filters=config.infrastructure.apply_filters,
             parameters = {
                 "model": language_detection_model,
                 "target_language": config.unimodal.lang_detection_language,
@@ -116,7 +116,7 @@ def unimodal_text_filtering(
             batch_id=batch_id,
             uids=ok_uids,
             samples=ok_samples,
-            pipeline_type= config.unimodal.pipeline_type,
+            apply_filters= config.infrastructure.apply_filters,
             parameters = {
                 "model": pos_tagging_model,
                 "target_pos_tags": pos_distribution

@@ -73,10 +73,10 @@ infrastructure:
   enable_metrics: true
   logging_level: DEBUG
   save_npy: true
+  apply_filters: false
 
 unimodal:
   # ['same_input',  'classic']
-  pipeline_type: same_input
   batch_size: 4000
 
   caption_min_words: 2

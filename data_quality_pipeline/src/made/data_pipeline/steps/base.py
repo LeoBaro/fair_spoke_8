@@ -7,7 +7,7 @@ def apply_filtering_step(
         batch_id: int,
         uids: list[str],
         samples: list[Any],
-        pipeline_type: str,
+        apply_filters: bool,
         parameters: dict[str, Any]
     ) -> tuple[list[str], list[Any], list[str], list[Any]]:
     """
@@ -23,10 +23,8 @@ def apply_filtering_step(
         `batch_id (int)`: Identifier for the current batch; used for logging metrics.
         `uids (list[str])`: List of unique identifiers corresponding to each sample.
         `samples (list[Any])`: List of samples to be filtered.
-        `pipeline_type (str)`: Pipeline mode; if set to `"same_input"`, the original samples are 
-                             returned as valid results and no samples are considered filtered out.
-                             If set to `"classic"`, the mask is applied to the samples
-                             and only the valid samples are returned.
+        `apply_filters (bool)`: If set to `false`, the original samples are returned as valid results and no samples are considered filtered out.
+                                If set to `true`, the mask is applied to the samples and only the valid samples are returned.
         `parameters (dict[str, Any])`: Dictionary of parameters used to configure the filter function.
 
     Returns:
@@ -55,17 +53,18 @@ def apply_filtering_step(
         len(uids),
         len(ok_uids),
         elapsed_time,
-        pipeline_type,
+        apply_filters,
         {"parameters": parameters}
     )
 
-    if pipeline_type == "same_input":
+    if apply_filters == "same_input":
         ok_uids = uids
         ok_samples = samples
         uids_filtered = []
         samples_filtered = []
 
     return ok_uids, ok_samples, uids_filtered, samples_filtered
+
 
 def execute_filter(
         filter_name: Callable,

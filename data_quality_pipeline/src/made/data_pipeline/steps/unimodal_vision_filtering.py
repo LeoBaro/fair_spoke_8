@@ -58,7 +58,7 @@ def unimodal_vision_filtering(tar_files: list[str | Path], log_folder: Path, con
             batch_id=batch_id,
             uids=batch[0],
             samples=batch[1],
-            pipeline_type= config.unimodal.pipeline_type,
+            apply_filters=config.infrastructure.apply_filters,
             parameters = {
                 "image_min_aspect_ratio": config.unimodal.image_min_aspect_ratio,
                 "image_max_aspect_ratio": config.unimodal.image_max_aspect_ratio

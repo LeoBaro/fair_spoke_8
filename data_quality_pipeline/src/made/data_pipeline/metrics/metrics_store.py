@@ -21,13 +21,13 @@ class MetricsStore(metaclass=Singleton):
             input_count: int,
             output_count: int,
             elapsed_time: float,
-            pipeline_type: str,
+            apply_filters: str,
             extra_info: Optional[Dict] = None
         ):
         
         metric = {
             "worker_id": self.worker_id,
-            "pipeline_type": pipeline_type,
+            "apply_filters": apply_filters,
             "batch_id": batch_id,
             "timestamp": datetime.now().isoformat(),
             "input_count": input_count,
@@ -70,7 +70,7 @@ class MetricsStore(metaclass=Singleton):
                 "max_elapsed_time_seconds": round(max(times), 5),
                 "calls": len(times),
                 "parameters": metrics[0]['parameters'],
-                "pipeline_type": metrics[0]['pipeline_type']
+                "apply_filters": metrics[0]['apply_filters']
             }
             
         return summary
