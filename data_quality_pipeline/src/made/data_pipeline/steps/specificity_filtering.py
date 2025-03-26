@@ -19,17 +19,19 @@ from made.data_pipeline.data.datacomp_handler import decode_webdataset, get_next
 class SpecificityFilter:
     def __init__(self, config_path: Path):
         self.config = Config(config_path)
+        ref_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "reference.pt")
+        ref = torch.load(ref_path)
+        self.img_ref, self.txt_ref = ref["img"], ref["txt"]
 
     def ray_specificity_filtering(self, tar_files: list[str | Path], log_folder: Path):
         _ = MetricsStore()  # Metrics tracking if enabled
-        return specificity_filtering(tar_files, log_folder, self.config)
+        return specificity_filtering(tar_files, log_folder, self.config, self.img_ref, self.txt_ref)
 
 
 
-def specificity_filtering(tar_files: list[str | Path], log_folder: Path, config: Config):
+def specificity_filtering(tar_files: list[str | Path], log_folder: Path, config: Config, img_ref: torch.Tensor, txt_ref: torch.Tensor):
     logger = logging.getLogger("ray")
 
-    # Ensure the device is set (GPU if available, else CPU)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     img_ref.to(device)
     txt_ref.to(device)
@@ -41,7 +43,7 @@ def specificity_filtering(tar_files: list[str | Path], log_folder: Path, config:
     dataset = decode_webdataset(
         tar_files,
         get_images=True,
-        get_captions=False,
+        get_captions=True,
         batch_size=config.unimodal.batch_size
     )
 
@@ -60,7 +62,8 @@ def specificity_filtering(tar_files: list[str | Path], log_folder: Path, config:
 
         # Convert batch images to tensors and move them to device
         batch_images = [torch.tensor(np.array(img)).to(device) for img in batch[1]]
-
+        captions = batch[2]
+        
         # Apply specificity filtering
         ok_uids, ok_samples, uids_filtered, samples_filtered = apply_filtering_step(
             filter_name=_get_images_by_specificity_filter_mask,
@@ -68,8 +71,8 @@ def specificity_filtering(tar_files: list[str | Path], log_folder: Path, config:
             uids=batch[0],
             samples=batch_images,
             parameters={
-                "specificity_threshold": config.unimodal.specificity_threshold,
-                "curvature": config.unimodal.curvature,
+                "specificity_threshold": config.multimodal.specificity_threshold,
+                "curvature": config.multimodal.curvature,
             }
         )
 
@@ -102,16 +105,7 @@ def _validate_configuration(config: Config):
         raise ValueError("Curvature must be a positive value")
 
 
-# Load weights
-ref_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "reference.pt")
-ref = torch.load(ref_path)
-img_ref, txt_ref = ref["img"], ref["txt"]
-
-def specificity(image=None, text=None, curv=None):
-    assert (image is not None) ^ (text is not None), "Either image or text must be provided but not both"
-    assert curv is not None, "Curvature must be provided"
-
-    global img_ref, txt_ref
+def specificity(image, text, curv: float):
 
     if image is not None:
         txt_ref = txt_ref.to(image.device)  # Ensure txt_ref is on the same device as the image
