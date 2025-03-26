@@ -80,7 +80,6 @@ unimodal:
 
   caption_min_words: 2
   caption_max_length: 100
-  caption_max_chars: 5
 
   lang_detection_model_path: models/lid.176.bin
   lang_detection_score_threshold: 0.7
