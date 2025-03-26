@@ -8,3 +8,4 @@ test/logs/*
 **/*.json
 ok_uids.npy
 **/*.bin
+benchmark/data/*
