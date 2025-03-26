@@ -4,7 +4,8 @@ import ray
 import logging
 
 from made.data_pipeline.steps.unimodal_text_filtering import UnimodalTextFilter
-from made.data_pipeline.steps.unimodal_vision_filtering import UnimodalVisionFilter
+from made.data_pipeline.steps.unimodal_vision_filtering import UnimodalVisionFilter 
+from made.data_pipeline.steps.multimodal_filtering import MultimodalFilter
 #from made.data_pipeline.steps.multimodal_filtering import ray_multimodal_filtering
 #from made.data_pipeline.steps.vision_deduplication import ray_vision_deduplication
 
@@ -33,10 +34,13 @@ def run_pipeline(
         UnimodalVisionFilter.remote(config_path) for _ in range(num_workers)
     ]    
 
+    multimodal_filtering_actors = [
+        MultimodalFilter.remote(config_path) for _ in range(num_workers)
+    ]
 
     # Ensure each worker gets a subset of tar files
     tar_splits = [tar_files[i::num_workers] for i in range(num_workers)]
-    logger.info(f"Num. workers: {num_workers}. Shard split: {[len(s) for s in tar_splits]}")
+    logger.info("Num. workers: %d. Shard split: %s", num_workers, [len(s) for s in tar_splits])
 
 
     # Launch Ray tasks
@@ -48,21 +52,23 @@ def run_pipeline(
         actor.ray_unimodal_vision_filtering.remote(tar_split, log_folder) for actor, tar_split in zip(unimodal_vision_filtering_actors, tar_splits) if tar_split
     ]
 
-    unimodal_text_filtering_results = ray.get(text_filtering_futures)
+    unimodal_text_filtering_results   = ray.get(text_filtering_futures)
     unimodal_vision_filtering_results = ray.get(vision_filtering_futures)
 
-    # Concatenate results
-    # concatenated_text_results = sum(unimodal_text_filtering_results, [])
-    # concatenated_vision_results = sum(unimodal_vision_filtering_results, [])
 
-    
+    text_uids = set(uid for sublist in unimodal_text_filtering_results for uid in sublist)
+    vision_uids = set(uid for sublist in unimodal_vision_filtering_results for uid in sublist)
+    unimodal_ok_uids = text_uids & vision_uids
+
     # Pass results to multimodal filtering along with the original input
-    # multimodal_filtering_futures = [
-    #     ray_multimodal_filtering.remote(tar, concatenated_text_results, concatenated_vision_results) 
-    #     for tar in tar_splits if tar
-    # ]
+    multimodal_filtering_futures = [
+        actor.ray_multimodal_filtering.remote(unimodal_ok_uids, tar, log_folder) 
+        for actor, tar in zip(multimodal_filtering_actors, tar_splits) if tar
+    ]
 
-    # multimodal_filtering_results = ray.get(multimodal_filtering_futures)
+    multimodal_filtering_results = ray.get(multimodal_filtering_futures)
+
+    multimodal_ok_uids = set(uid for sublist in multimodal_filtering_results for uid in sublist)
 
     # vision_deduplication_futures = [
     #     ray_vision_deduplication.remote(tar, multimodal_filtering_results)
@@ -72,4 +78,4 @@ def run_pipeline(
     # vision_deduplication_results = ray.get(vision_deduplication_futures)
     
 
-    return []
+    return multimodal_ok_uids   

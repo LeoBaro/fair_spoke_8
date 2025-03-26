@@ -28,9 +28,5 @@ unimodal:
 
 multimodal:
   batch_size: 32
-  clip_processor: "openai/clip-vit-base-patch32"
-  clip_model: "openai/clip-vit-base-patch32"
-  caption_generation_processor: "llava-hf/llava-v1.6-mistral-7b-hf"
-  caption_generator_model: "llava-hf/llava-v1.6-mistral-7b-hf"
-  diffusion_model: ""
-  clip_score_threshold: 0.5
+  clip_model: openai/clip-vit-base-patch32
+  clip_score_threshold: 0.3
