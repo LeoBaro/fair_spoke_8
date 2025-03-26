@@ -198,3 +198,10 @@ Larger CLIP models have more parameters due to increased **layers, hidden dimens
 - **For best performance** → **ViT-H/14 with 448×448**, but requires **high-end compute**.  
 
 Would you like help setting up your `img2dataset` config for a specific CLIP model? 🚀  
+
+
+# Implementations
+
+* SemDeDup: 
+  * https://docs.nvidia.com/nemo-framework/user-guide/latest/datacuration/semdedup.html
+  * https://github.com/Guhaifudeng/SemDeDup
