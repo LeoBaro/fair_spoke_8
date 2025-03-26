@@ -9,11 +9,11 @@ from datetime import datetime
 from made.config import Config
 from made.paths import MADE_PATH
 from made.data_pipeline.metrics.metrics_store import MetricsStore
-from made.data_pipeline.steps.base import apply_filtering_step
+from made.data_pipeline.steps.base import apply_filtering_step, FilteringBlock
 from made.data_pipeline.data.datacomp_handler import decode_webdataset, get_next_batch
 
-@ray.remote
-class UnimodalTextFilter:
+@ray.remote(num_gpus=0.1)
+class UnimodalTextFilter(FilteringBlock):
 
     def __init__(self, config_path: Path):
         self.config = Config(config_path)
@@ -27,7 +27,7 @@ class UnimodalTextFilter:
             ) as file:
             self.common_pos_patterns = [line.strip() for line in file.readlines()]
     
-    def ray_unimodal_text_filtering(self, tar_files: list[str | Path], log_folder: Path):
+    def execute(self, tar_files: list[str | Path], log_folder: Path, uids: list[str] = None):
         _ = MetricsStore()
         return unimodal_text_filtering(
             self.language_detection_model,
@@ -35,7 +35,8 @@ class UnimodalTextFilter:
             self.common_pos_patterns,
             tar_files, 
             log_folder, 
-            self.config
+            self.config,
+            uids
         )
 
 
@@ -45,7 +46,8 @@ def unimodal_text_filtering(
         pos_distribution,
         tar_files: list[str | Path], 
         log_folder: Path, 
-        config: Config
+        config: Config,
+        uids: list[str] = None
     ):
     
     logger = logging.getLogger("ray")
@@ -58,7 +60,8 @@ def unimodal_text_filtering(
         tar_files,
         get_images=False,
         get_captions=True,
-        batch_size=config.unimodal.batch_size
+        batch_size=config.unimodal.batch_size,
+        valid_uids=uids
     )   
 
     # logger.info("Iterating over dataset")

@@ -33,6 +33,8 @@ def test_unimodal_text_filtering(tar_files, log_folder, config):
         tar_files, 
         log_folder,
         config)
+    
+    assert len(results) == 40
 
 def test_ray_unimodal_text_filtering(ray_init, ray_flag, tar_files, log_folder, config_path):
     if not ray_flag:
@@ -40,9 +42,9 @@ def test_ray_unimodal_text_filtering(ray_init, ray_flag, tar_files, log_folder, 
     
     unimodalTextFilter = UnimodalTextFilter.remote(config_path)
 
-    # single worker test 
     results = ray.get(
         [
-            unimodalTextFilter.ray_unimodal_text_filtering.remote(tar_files, log_folder)
+            unimodalTextFilter.execute.remote(tar_files, log_folder)
         ]
     )
+    assert len(results[0]) == 40

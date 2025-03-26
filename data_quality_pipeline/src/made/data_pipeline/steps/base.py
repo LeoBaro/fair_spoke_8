@@ -1,6 +1,14 @@
 from typing import Callable, Any
 import time
 from made.data_pipeline.metrics.metrics_store import MetricsStore
+from abc import ABC, abstractmethod
+from pathlib import Path
+
+class FilteringBlock(ABC):
+    @abstractmethod
+    def execute(self, tar_files: list[str | Path], log_folder: Path, uids: list[str] = None):
+        pass
+    
 
 def apply_filtering_step(
         filter_name: Callable,

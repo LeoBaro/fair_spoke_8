@@ -11,19 +11,19 @@ from PIL import Image
 
 from made.config import Config
 from made.data_pipeline.metrics.metrics_store import MetricsStore
-from made.data_pipeline.steps.base import apply_filtering_step
+from made.data_pipeline.steps.base import apply_filtering_step, FilteringBlock
 from made.data_pipeline.data.datacomp_handler import decode_webdataset, get_next_batch
 
 
 @ray.remote
-class SpecificityFilter:
+class SpecificityFilter(FilteringBlock):
     def __init__(self, config_path: Path):
         self.config = Config(config_path)
         ref_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "reference.pt")
         ref = torch.load(ref_path)
         self.img_ref, self.txt_ref = ref["img"], ref["txt"]
 
-    def ray_specificity_filtering(self, tar_files: list[str | Path], log_folder: Path):
+    def execute(self, tar_files: list[str | Path], log_folder: Path):
         _ = MetricsStore()  # Metrics tracking if enabled
         return specificity_filtering(tar_files, log_folder, self.config, self.img_ref, self.txt_ref)
 

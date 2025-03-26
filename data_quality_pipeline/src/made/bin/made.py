@@ -3,10 +3,11 @@ import ray
 import logging
 import argparse
 from time import time
+from pathlib import Path
 
 from made.config import Config
 from made.data_pipeline.utils import collect_tar_files, save_uids, shutdown_ray
-from made.data_pipeline.pipeline import run_pipeline
+from made.data_pipeline.pipeline import ActorGroupPipeline
 from made.data_pipeline.common import Singleton
 
 
@@ -38,6 +39,20 @@ def cleanup():
     shutdown_ray()
     Singleton.destroy_instance(Config)
 
+def make_pipeline(config_path: str | Path, shards_path: list[str | Path], log_folder: str | Path):
+
+    actor_group_pipeline = ActorGroupPipeline()
+
+    actor_group_pipeline.add_pipeline_step("intersection")
+    actor_group_pipeline.add_actor_group(0, "UnimodalTextFilter", 2, config_path)
+    actor_group_pipeline.add_actor_group(0, "UnimodalVisionFilter", 1, config_path)
+
+
+    actor_group_pipeline.add_pipeline_step("union")
+    actor_group_pipeline.add_actor_group(1, "MultimodalFilter", 1, config_path)
+
+    return actor_group_pipeline
+
 def main(args):
     config = Config(args.config_path)
 
@@ -49,12 +64,12 @@ def main(args):
     logger.info("Starting pipeline")
     logger.info("Num workers: %s", config.infrastructure.num_workers)
     
+    made_pipeline = make_pipeline(args.config_path, collect_tar_files(args.shards_path), args.log_folder)
+
     s = time()
-    ok_uids = run_pipeline(
+    ok_uids = made_pipeline.execute(
         collect_tar_files(args.shards_path), 
-        config.infrastructure.num_workers,
-        args.log_folder,
-        args.config_path
+        args.log_folder
     )
     took = time() - s
     logger.info(f"Pipeline completed. Took {took:0.2f} seconds")
