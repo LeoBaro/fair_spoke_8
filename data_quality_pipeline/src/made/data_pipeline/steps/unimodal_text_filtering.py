@@ -87,7 +87,7 @@ def unimodal_text_filtering(
             apply_filters= config.infrastructure.apply_filters,
             parameters = {
                 "min_words": config.unimodal.caption_min_words,
-                "min_chars": config.unimodal.caption_max_chars
+                "min_chars": config.unimodal.caption_min_chars
             }
         )
 
