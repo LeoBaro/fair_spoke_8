@@ -20,6 +20,7 @@ def decode_webdataset(
         batch_size: int = 16,
         get_images: bool = True,
         get_captions: bool = True,
+        valid_uids: list[str] = None
 ) -> wds.compat.WebDataset:
 
     if len(tar_files) == 0:
@@ -39,11 +40,17 @@ def decode_webdataset(
         decoders.append(wds.handle_extension(".txt", decode_caption))
         keys.append("txt")
 
+    # This is extremely slow
+    def filter_by_uid(sample):
+        uid = sample.get("json", "unknown")
+        return uid in valid_uids if valid_uids else True
+    
     return (
         wds.WebDataset(tar_files, shardshuffle=False)
         .decode(
             *decoders
         )
+        .select(filter_by_uid)
         .to_tuple(*keys)
         .batched(batch_size)
     )
