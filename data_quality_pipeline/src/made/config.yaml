@@ -10,7 +10,7 @@ unimodal:
   batch_size: 4000
 
   caption_min_words: 2
-  caption_max_length: 100
+  caption_min_chars: 5
 
   lang_detection_model_path: models/lid.176.bin
   lang_detection_score_threshold: 0.7
