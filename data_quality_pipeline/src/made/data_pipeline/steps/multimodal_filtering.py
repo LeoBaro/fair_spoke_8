@@ -12,37 +12,39 @@ from transformers import CLIPProcessor, CLIPModel
 
 from made.config import Config
 from made.data_pipeline.metrics.metrics_store import MetricsStore
-from made.data_pipeline.steps.base import apply_filtering_step
+from made.data_pipeline.steps.base import apply_filtering_step, FilteringBlock
 from made.data_pipeline.data.datacomp_handler import decode_webdataset, get_next_batch
 
-@ray.remote
-class MultimodalFilter:
+@ray.remote(num_gpus=0.1)
+class MultimodalFilter(FilteringBlock):
     def __init__(self, config_path: Path):
         self.config = Config(config_path)
         _validate_configuration(self.config)
         device = "cuda" if torch.cuda.is_available() else "cpu"
+        if device == "cpu":
+            raise ValueError("Multimodal filtering is not supported on CPU")
         self.model = CLIPModel.from_pretrained(self.config.multimodal.clip_model).to(device)
         self.processor = CLIPProcessor.from_pretrained(self.config.multimodal.clip_model)
 
-    def ray_multimodal_filtering(self, unimodal_ok_uids: list[str], tar_files: list[str | Path], log_folder: Path):
+    def execute(self, tar_files: list[str | Path], log_folder: Path, uids: list[str] = None):
         _ = MetricsStore()
         return multimodal_filtering(
             self.model,
             self.processor,
-            unimodal_ok_uids,
             tar_files, 
             log_folder, 
-            self.config
+            self.config,
+            uids
         )
 
 
 def multimodal_filtering(
         clip_model,
         clip_processor,
-        unimodal_ok_uids: list[str],
         tar_files: list[str | Path],
         log_folder: Path, 
-        config: Config
+        config: Config,
+        uids: list[str] = None
     ):
     logger = logging.getLogger("ray")
     
@@ -52,7 +54,7 @@ def multimodal_filtering(
         get_images=True,
         get_captions=True,
         batch_size=config.multimodal.batch_size,
-        valid_uids=unimodal_ok_uids
+        valid_uids=uids
     )   
     
     # logger.info("Iterating over dataset")

@@ -18,6 +18,8 @@ def test_multimodal_filtering(tar_files, log_folder, config):
     processor = CLIPProcessor.from_pretrained(config.multimodal.clip_model)
 
     results = multimodal_filtering(model, processor, tar_files, log_folder, config)
+    assert len(results) == 12
+
 
 def test_ray_multimodal_filtering(ray_init, ray_flag, tar_files, log_folder, config_path):
     if not ray_flag:
@@ -25,10 +27,10 @@ def test_ray_multimodal_filtering(ray_init, ray_flag, tar_files, log_folder, con
     
     multimodalFilter = MultimodalFilter.remote(config_path)
 
-    # single worker test 
     results = ray.get(
         [
-            multimodalFilter.ray_multimodal_filtering.remote(tar_files, log_folder)
+            multimodalFilter.execute.remote(tar_files, log_folder)
         ]
     )
 
+    assert len(results[0]) == 12

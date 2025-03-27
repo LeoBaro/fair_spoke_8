@@ -1,0 +1,1 @@
+The tar files contains 500 elements each.

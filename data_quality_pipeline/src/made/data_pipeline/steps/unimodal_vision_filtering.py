@@ -12,17 +12,17 @@ from made.data_pipeline.metrics.metrics_store import MetricsStore
 from made.data_pipeline.steps.base import apply_filtering_step
 from made.data_pipeline.data.datacomp_handler import decode_webdataset, get_next_batch
 
-@ray.remote
+@ray.remote(num_gpus=0.1)
 class UnimodalVisionFilter:
     def __init__(self, config_path: Path):
         self.config = Config(config_path)
 
-    def ray_unimodal_vision_filtering(self, tar_files: list[str | Path], log_folder: Path):
+    def execute(self, tar_files: list[str | Path], log_folder: Path, uids: list[str] = None):
         _ = MetricsStore()
-        return unimodal_vision_filtering(tar_files, log_folder, self.config)
+        return unimodal_vision_filtering(tar_files, log_folder, self.config, uids)
 
 
-def unimodal_vision_filtering(tar_files: list[str | Path], log_folder: Path, config: Config):
+def unimodal_vision_filtering(tar_files: list[str | Path], log_folder: Path, config: Config, uids: list[str] = None):
     logger = logging.getLogger("ray")
 
     # logger.info("Validating configuration")
@@ -33,7 +33,8 @@ def unimodal_vision_filtering(tar_files: list[str | Path], log_folder: Path, con
         tar_files,
         get_images=True,
         get_captions=False,
-        batch_size=config.unimodal.batch_size
+        batch_size=config.unimodal.batch_size,
+        valid_uids=uids
     )   
     
     # logger.info("Iterating over dataset")
