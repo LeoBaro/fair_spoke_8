@@ -1,0 +1,9 @@
+torch
+Pillow
+numpy
+requests
+ftfy
+regex
+huggingface_hub
+matplotlib
+transformers
