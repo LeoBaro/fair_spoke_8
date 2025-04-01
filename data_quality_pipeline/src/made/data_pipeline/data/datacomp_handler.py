@@ -59,6 +59,8 @@ def decode_webdataset(
             .to_tuple(*keys)
             .batched(batch_size)
         )
+
+    decoders.append(wds.handle_extension(".json", decode_uid))
     return (
         wds.WebDataset(tar_files, shardshuffle=False)
         .decode(
