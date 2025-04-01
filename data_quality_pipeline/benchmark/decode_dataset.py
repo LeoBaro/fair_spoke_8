@@ -25,7 +25,7 @@ def benchmark_webdataset(tar_files, iterations=10):
         total_time = 0
 
         for _ in range(iterations):
-            dataset = decode_webdataset_two_steps(
+            dataset = decode_webdataset(
                 tar_files,
                 get_images=config.get("get_images", False),
                 get_captions=config.get("get_captions", False),

@@ -9,4 +9,3 @@ ok_uids.npy
 **/*.bin
 benchmark/data/*
 
-test/data/test_decode_dataset.py
