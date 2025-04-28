@@ -94,6 +94,8 @@ unimodal:
     image_min_aspect_ratio: 0.8
     image_max_aspect_ratio: 1.8
 
+    text_threshold: 0.7
+
 multimodal:
     batch_size: 256
                 
