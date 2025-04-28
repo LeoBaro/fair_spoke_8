@@ -1,6 +1,7 @@
 from pathlib import Path
 import logging
 import ray
+import easyocr
 import numpy as np
 from numpy.typing import NDArray
 from PIL import Image
@@ -83,7 +84,16 @@ def unimodal_vision_filtering(tar_files: list[str | Path], log_folder: Path, con
 
         # ------------------------------------------- 
         # second step: remove images containing text
-        # TODO: implement this
+        ok_uids, ok_samples, uids_filtered, samples_filtered = apply_filtering_step(
+            filter_name=_get_images_by_text_filter_mask,
+            batch_id=batch_id,
+            uids=ok_uids,
+            samples=ok_samples,
+            apply_filters=config.infrastructure.apply_filters,
+            parameters = {
+                "text_thresh": config.unimodal.text_threshold
+            }
+        )
 
 
         # ------------------------------------------- 
@@ -112,9 +122,36 @@ def _get_images_by_aspect_ratio_filter_mask(
     Filter the images by aspect ratio.
     """
     return [
-        (image.width / image.height > image_min_aspect_ratio and image.width / image.height < image_max_aspect_ratio)
+        (
+            (image.width / image.height > image_min_aspect_ratio )
+            and (image.width / image.height < image_max_aspect_ratio)
+        )
         for image in images
     ]
+
+def _get_images_by_text_filter_mask(
+        images: list[Image.Image],
+        text_thresh: float=0.7
+    ) -> list[bool]:
+    """
+    Filter the images by text.
+    """
+    reader = easyocr.Reader(['en'])
+
+    mask = [False] * len(images)
+    for i, image in enumerate(images):
+        text_results = reader.readtext(
+            image, 
+            text_threshold = text_thresh,
+            decoder = 'greedy',
+            batch_size = 1,
+            mag_ratio = .5,
+        )
+
+        if text_results:
+            mask[i] = True
+
+    return mask
 
 def _validate_configuration(config: Config):
     if config.unimodal.image_min_aspect_ratio < 0.0 or config.unimodal.image_min_aspect_ratio > 1.0:
