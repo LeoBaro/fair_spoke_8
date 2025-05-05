@@ -63,7 +63,8 @@ def unimodal_vision_filtering(tar_files: list[str | Path], log_folder: Path, con
             apply_filters=config.infrastructure.apply_filters,
             parameters = {
                 "image_min_aspect_ratio": config.unimodal.image_min_aspect_ratio,
-                "image_max_aspect_ratio": config.unimodal.image_max_aspect_ratio
+                "image_max_aspect_ratio": config.unimodal.image_max_aspect_ratio,
+                "image_min_dimension": config.unimodal.image_min_dimension
             }
         )
 
@@ -116,7 +117,8 @@ def unimodal_vision_filtering(tar_files: list[str | Path], log_folder: Path, con
 def _get_images_by_aspect_ratio_filter_mask(
         images: list[Image.Image],
         image_min_aspect_ratio: float,
-        image_max_aspect_ratio: float
+        image_max_aspect_ratio: float,
+        image_min_dimension: int
     ) -> list[bool]:
     """
     Filter the images by aspect ratio.
@@ -125,6 +127,7 @@ def _get_images_by_aspect_ratio_filter_mask(
         (
             (image.width / image.height > image_min_aspect_ratio )
             and (image.width / image.height < image_max_aspect_ratio)
+            and (min(image.width, image.height) > image_min_dimension)
         )
         for image in images
     ]
@@ -136,12 +139,15 @@ def _get_images_by_text_filter_mask(
     """
     Filter the images by text.
     """
-    reader = easyocr.Reader(['en'])
+    reader = easyocr.Reader(['en'], gpu=True)
 
-    mask = [False] * len(images)
+    mask = [True] * len(images)
     for i, image in enumerate(images):
+        # Convert PIL Image to numpy array
+        img_array = np.array(image)
+        
         text_results = reader.readtext(
-            image, 
+            img_array, 
             text_threshold = text_thresh,
             decoder = 'greedy',
             batch_size = 1,
@@ -149,7 +155,7 @@ def _get_images_by_text_filter_mask(
         )
 
         if text_results:
-            mask[i] = True
+            mask[i] = False
 
     return mask
 
