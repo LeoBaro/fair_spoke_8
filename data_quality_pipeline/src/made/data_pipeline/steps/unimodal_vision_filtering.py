@@ -86,7 +86,7 @@ def unimodal_vision_filtering(tar_files: list[str | Path], log_folder: Path, con
         # ------------------------------------------- 
         # second step: remove images containing text
         ok_uids, ok_samples, uids_filtered, samples_filtered = apply_filtering_step(
-            filter_name=_get_images_by_text_filter_mask,
+            filter_name=_get_images_by_text_filter_mask_batched,
             batch_id=batch_id,
             uids=ok_uids,
             samples=ok_samples,
@@ -142,12 +142,11 @@ def _get_images_by_text_filter_mask(
     reader = easyocr.Reader(['en'], gpu=True)
 
     mask = [True] * len(images)
-    for i, image in enumerate(images):
-        # Convert PIL Image to numpy array
-        img_array = np.array(image)
-        
+    img_array = [np.array(image) for image in images]
+
+    for i, image in enumerate(img_array):
         text_results = reader.readtext(
-            img_array, 
+            image, 
             text_threshold = text_thresh,
             decoder = 'greedy',
             batch_size = 1,
@@ -158,6 +157,35 @@ def _get_images_by_text_filter_mask(
             mask[i] = False
 
     return mask
+
+def _get_images_by_text_filter_mask_batched(
+        images: list[Image.Image],
+        text_thresh: float=0.7
+    ) -> list[bool]:
+    """
+    Filter the images by text.
+    """
+    reader = easyocr.Reader(['en'], gpu=True)
+
+    mask = [True] * len(images)
+    img_array = [np.array(image) for image in images]
+    
+    text_results = reader.readtext_batched(
+        img_array,
+        n_width=1024*2,
+        n_height=1024*2,
+        decoder = 'greedy',
+        mag_ratio=.5,
+        batch_size = len(img_array),
+        paragraph = True,
+        text_threshold=text_thresh
+        )
+
+    mask = [len(result) > 0 for result in text_results]
+
+    return mask
+
+
 
 def _validate_configuration(config: Config):
     if config.unimodal.image_min_aspect_ratio < 0.0 or config.unimodal.image_min_aspect_ratio > 1.0:
