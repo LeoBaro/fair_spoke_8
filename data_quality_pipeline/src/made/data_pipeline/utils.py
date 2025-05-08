@@ -1,13 +1,40 @@
 from typing import Any
 from pathlib import Path
-
+import logging
 import ray
 import numpy as np
 from made.config import Config
 from made.data_pipeline.metrics.metrics_store import MetricsStore
+from made.data_pipeline.common import Singleton
 
-def collect_tar_files(shards_path: list[str | Path]):
-    return sorted([str(s) for s in Path(shards_path).glob("*.tar")])
+def connect_or_start_ray(ray_address, logging_level):
+    if ray_address:
+        print("Connecting to Ray at", ray_address)
+        ray.init(
+            address=ray_address,
+            logging_level=getattr(logging, logging_level),
+            log_to_driver=True
+        )
+    else:
+        print("Starting Ray locally")
+        ray.init(
+            logging_level=getattr(logging, logging_level),
+            log_to_driver=True
+        )
+
+def cleanup():
+    shutdown_ray()
+    Singleton.destroy_instance(Config)
+
+def collect_tar_files(shards_path: list[str | Path], recursive: bool = False):
+    if recursive:
+        tar_files = sorted([str(s) for s in Path(shards_path).glob("**/*.tar")])
+    else:
+        tar_files = sorted([str(s) for s in Path(shards_path).glob("*.tar")])
+    print(f"Found {len(tar_files)} tar files from {shards_path}")
+    if len(tar_files) == 0:
+        raise ValueError(f"No tar files found in {shards_path}")
+    return tar_files
 
 def get_worker_id():
     return ray.get_runtime_context().get_worker_id() if ray.is_initialized() else "local"
