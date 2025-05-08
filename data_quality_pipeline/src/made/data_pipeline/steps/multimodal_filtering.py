@@ -18,6 +18,7 @@ from made.data_pipeline.data.datacomp_handler import decode_webdataset, get_next
 @ray.remote(num_gpus=0.1)
 class MultimodalFilter(FilteringBlock):
     def __init__(self, config_path: Path):
+        super().__init__()
         self.config = Config(config_path)
         _validate_configuration(self.config)
         device = "cuda" if torch.cuda.is_available() else "cpu"

@@ -15,6 +15,7 @@ from made.data_pipeline.data.datacomp_handler import decode_webdataset, get_next
 @ray.remote(num_gpus=0.1)
 class UnimodalVisionFilter:
     def __init__(self, config_path: Path):
+        super().__init__()
         self.config = Config(config_path)
 
     def execute(self, tar_files: list[str | Path], log_folder: Path, uids: list[str] = None):

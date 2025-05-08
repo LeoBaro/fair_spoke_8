@@ -16,6 +16,7 @@ from made.data_pipeline.data.datacomp_handler import decode_webdataset, get_next
 class UnimodalTextFilter(FilteringBlock):
 
     def __init__(self, config_path: Path):
+        super().__init__()
         self.config = Config(config_path)
         self.language_detection_model = fasttext.load_model(
             str(MADE_PATH / self.config.unimodal.lang_detection_model_path)
