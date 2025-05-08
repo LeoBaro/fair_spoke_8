@@ -97,6 +97,7 @@ unimodal:
 
     text_threshold: 0.7
     text_detection_model_path: models
+    text_detection_mag_ratio: 0.5
                 
 multimodal:
     batch_size: 256

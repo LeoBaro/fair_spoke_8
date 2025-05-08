@@ -106,7 +106,8 @@ def unimodal_vision_filtering(
             apply_filters=config.infrastructure.apply_filters,
             parameters = {
                 "model": text_detection_model,
-                "text_thresh": config.unimodal.text_threshold
+                "text_thresh": config.unimodal.text_threshold,
+                "mag_ratio": config.unimodal.text_detection_mag_ratio
             }
         )
 
@@ -149,7 +150,8 @@ def _get_images_by_aspect_ratio_filter_mask(
 def _get_images_by_text_filter_mask(
         images: list[Image.Image],
         model: easyocr.Reader,
-        text_thresh: float=0.7
+        text_thresh: float,
+        mag_ratio: float
     ) -> list[bool]:
     """
     Filter the images by text.
@@ -164,7 +166,7 @@ def _get_images_by_text_filter_mask(
             text_threshold = text_thresh,
             decoder = 'greedy',
             batch_size = 1,
-            mag_ratio = .5,
+            mag_ratio = mag_ratio,
         )
 
         if text_results:
@@ -175,7 +177,8 @@ def _get_images_by_text_filter_mask(
 def _get_images_by_text_filter_mask_batched(
         images: list[Image.Image],
         model: easyocr.Reader,
-        text_thresh: float=0.7
+        text_thresh: float,
+        mag_ratio: float
     ) -> list[bool]:
     """
     Filter the images by text.
@@ -189,7 +192,7 @@ def _get_images_by_text_filter_mask_batched(
         n_width=256,
         n_height=256,
         decoder = 'greedy',
-        mag_ratio=.5,
+        mag_ratio=mag_ratio,
         batch_size = len(img_array),
         paragraph = True,
         text_threshold=text_thresh
