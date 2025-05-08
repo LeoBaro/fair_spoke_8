@@ -96,7 +96,8 @@ unimodal:
     image_min_dimension: 50
 
     text_threshold: 0.7
-
+    text_detection_model_path: models
+                
 multimodal:
     batch_size: 256
                 

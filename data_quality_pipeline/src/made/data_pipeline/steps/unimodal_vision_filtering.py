@@ -17,13 +17,26 @@ from made.data_pipeline.data.datacomp_handler import decode_webdataset, get_next
 class UnimodalVisionFilter:
     def __init__(self, config_path: Path):
         self.config = Config(config_path)
+        self.reader = easyocr.Reader(['en'], gpu=True, user_network_directory=self.config.unimodal.text_detection_model_path)
 
     def execute(self, tar_files: list[str | Path], log_folder: Path, uids: list[str] = None):
         _ = MetricsStore()
-        return unimodal_vision_filtering(tar_files, log_folder, self.config, uids)
+        return unimodal_vision_filtering(
+            self.reader,
+            tar_files, 
+            log_folder, 
+            self.config, 
+            uids
+        )
 
 
-def unimodal_vision_filtering(tar_files: list[str | Path], log_folder: Path, config: Config, uids: list[str] = None):
+def unimodal_vision_filtering(
+        text_detection_model: easyocr.Reader,
+        tar_files: list[str | Path], 
+        log_folder: Path, 
+        config: Config, 
+        uids: list[str] = None
+    ):
     logger = logging.getLogger("ray")
 
     # logger.info("Validating configuration")
@@ -92,6 +105,7 @@ def unimodal_vision_filtering(tar_files: list[str | Path], log_folder: Path, con
             samples=ok_samples,
             apply_filters=config.infrastructure.apply_filters,
             parameters = {
+                "model": text_detection_model,
                 "text_thresh": config.unimodal.text_threshold
             }
         )
@@ -134,18 +148,18 @@ def _get_images_by_aspect_ratio_filter_mask(
 
 def _get_images_by_text_filter_mask(
         images: list[Image.Image],
+        model: easyocr.Reader,
         text_thresh: float=0.7
     ) -> list[bool]:
     """
     Filter the images by text.
     """
-    reader = easyocr.Reader(['en'], gpu=True)
 
     mask = [True] * len(images)
     img_array = [np.array(image) for image in images]
 
     for i, image in enumerate(img_array):
-        text_results = reader.readtext(
+        text_results = model.readtext(
             image, 
             text_threshold = text_thresh,
             decoder = 'greedy',
@@ -160,20 +174,20 @@ def _get_images_by_text_filter_mask(
 
 def _get_images_by_text_filter_mask_batched(
         images: list[Image.Image],
+        model: easyocr.Reader,
         text_thresh: float=0.7
     ) -> list[bool]:
     """
     Filter the images by text.
     """
-    reader = easyocr.Reader(['en'], gpu=True)
 
     mask = [True] * len(images)
     img_array = [np.array(image) for image in images]
     
-    text_results = reader.readtext_batched(
+    text_results = model.readtext_batched(
         img_array,
-        n_width=1024*2,
-        n_height=1024*2,
+        n_width=256,
+        n_height=256,
         decoder = 'greedy',
         mag_ratio=.5,
         batch_size = len(img_array),

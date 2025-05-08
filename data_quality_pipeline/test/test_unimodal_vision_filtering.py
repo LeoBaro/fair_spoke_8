@@ -8,10 +8,15 @@ from made.data_pipeline.steps.unimodal_vision_filtering import (
 )
 from made.config import Config
 from made.data_pipeline.metrics.metrics_store import MetricsStore
+import easyocr
 
 def test_unimodal_vision_filtering(tar_files, log_folder, config):
-    results = unimodal_vision_filtering(tar_files, log_folder, config)
+    
+    text_detection_model = easyocr.Reader(['en'], gpu=True, user_network_directory=config.unimodal.text_detection_model_path)
+
+    results = unimodal_vision_filtering(text_detection_model, tar_files, log_folder, config)
     assert len(results) == 800
+
 def test_ray_unimodal_vision_filtering(ray_init, ray_flag, tar_files, log_folder, config_path):
     if not ray_flag:
         pytest.skip("Skipping Ray test because --ray flag was not provided.")
