@@ -76,10 +76,10 @@ infrastructure:
     enable_metrics: true
     logging_level: DEBUG
     save_npy: true
-    apply_filters: false
+    apply_filters: true
 
 unimodal:
-    batch_size: 250
+    batch_size: 500
 
     caption_min_words: 2
     caption_min_chars: 5
@@ -92,8 +92,13 @@ unimodal:
     good_captions_pos_distribution_path: models/common_pos_patterns.txt
 
     image_min_aspect_ratio: 0.8
-    image_max_aspect_ratio: 1.8
+    image_max_aspect_ratio: 3.0
+    image_min_dimension: 50
 
+    text_threshold: 0.7
+    text_detection_model_path: models
+    text_detection_mag_ratio: 0.5
+                
 multimodal:
     batch_size: 256
                 

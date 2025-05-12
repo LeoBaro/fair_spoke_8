@@ -1,6 +1,7 @@
 from pathlib import Path
 import logging
 import ray
+import easyocr
 import numpy as np
 from numpy.typing import NDArray
 from PIL import Image
@@ -16,13 +17,26 @@ from made.data_pipeline.data.datacomp_handler import decode_webdataset, get_next
 class UnimodalVisionFilter:
     def __init__(self, config_path: Path):
         self.config = Config(config_path)
+        self.reader = easyocr.Reader(['en'], gpu=True, user_network_directory=self.config.unimodal.text_detection_model_path)
 
     def execute(self, tar_files: list[str | Path], log_folder: Path, uids: list[str] = None):
         _ = MetricsStore()
-        return unimodal_vision_filtering(tar_files, log_folder, self.config, uids)
+        return unimodal_vision_filtering(
+            self.reader,
+            tar_files, 
+            log_folder, 
+            self.config, 
+            uids
+        )
 
 
-def unimodal_vision_filtering(tar_files: list[str | Path], log_folder: Path, config: Config, uids: list[str] = None):
+def unimodal_vision_filtering(
+        text_detection_model: easyocr.Reader,
+        tar_files: list[str | Path], 
+        log_folder: Path, 
+        config: Config, 
+        uids: list[str] = None
+    ):
     logger = logging.getLogger("ray")
 
     # logger.info("Validating configuration")
@@ -62,7 +76,8 @@ def unimodal_vision_filtering(tar_files: list[str | Path], log_folder: Path, con
             apply_filters=config.infrastructure.apply_filters,
             parameters = {
                 "image_min_aspect_ratio": config.unimodal.image_min_aspect_ratio,
-                "image_max_aspect_ratio": config.unimodal.image_max_aspect_ratio
+                "image_max_aspect_ratio": config.unimodal.image_max_aspect_ratio,
+                "image_min_dimension": config.unimodal.image_min_dimension
             }
         )
 
@@ -83,7 +98,18 @@ def unimodal_vision_filtering(tar_files: list[str | Path], log_folder: Path, con
 
         # ------------------------------------------- 
         # second step: remove images containing text
-        # TODO: implement this
+        ok_uids, ok_samples, uids_filtered, samples_filtered = apply_filtering_step(
+            filter_name=_get_images_by_text_filter_mask_batched,
+            batch_id=batch_id,
+            uids=ok_uids,
+            samples=ok_samples,
+            apply_filters=config.infrastructure.apply_filters,
+            parameters = {
+                "model": text_detection_model,
+                "text_thresh": config.unimodal.text_threshold,
+                "mag_ratio": config.unimodal.text_detection_mag_ratio
+            }
+        )
 
 
         # ------------------------------------------- 
@@ -106,15 +132,77 @@ def unimodal_vision_filtering(tar_files: list[str | Path], log_folder: Path, con
 def _get_images_by_aspect_ratio_filter_mask(
         images: list[Image.Image],
         image_min_aspect_ratio: float,
-        image_max_aspect_ratio: float
+        image_max_aspect_ratio: float,
+        image_min_dimension: int
     ) -> list[bool]:
     """
     Filter the images by aspect ratio.
     """
     return [
-        (image.width / image.height > image_min_aspect_ratio and image.width / image.height < image_max_aspect_ratio)
+        (
+            (image.width / image.height > image_min_aspect_ratio )
+            and (image.width / image.height < image_max_aspect_ratio)
+            and (min(image.width, image.height) > image_min_dimension)
+        )
         for image in images
     ]
+
+def _get_images_by_text_filter_mask(
+        images: list[Image.Image],
+        model: easyocr.Reader,
+        text_thresh: float,
+        mag_ratio: float
+    ) -> list[bool]:
+    """
+    Filter the images by text.
+    """
+
+    mask = [True] * len(images)
+    img_array = [np.array(image) for image in images]
+
+    for i, image in enumerate(img_array):
+        text_results = model.readtext(
+            image, 
+            text_threshold = text_thresh,
+            decoder = 'greedy',
+            batch_size = 1,
+            mag_ratio = mag_ratio,
+        )
+
+        if text_results:
+            mask[i] = False
+
+    return mask
+
+def _get_images_by_text_filter_mask_batched(
+        images: list[Image.Image],
+        model: easyocr.Reader,
+        text_thresh: float,
+        mag_ratio: float
+    ) -> list[bool]:
+    """
+    Filter the images by text.
+    """
+
+    mask = [True] * len(images)
+    img_array = [np.array(image) for image in images]
+    
+    text_results = model.readtext_batched(
+        img_array,
+        n_width=256,
+        n_height=256,
+        decoder = 'greedy',
+        mag_ratio=mag_ratio,
+        batch_size = len(img_array),
+        paragraph = True,
+        text_threshold=text_thresh
+        )
+
+    mask = [len(result) > 0 for result in text_results]
+
+    return mask
+
+
 
 def _validate_configuration(config: Config):
     if config.unimodal.image_min_aspect_ratio < 0.0 or config.unimodal.image_min_aspect_ratio > 1.0:
