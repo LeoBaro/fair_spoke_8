@@ -5,10 +5,10 @@ def create_config(num_workers, batch_size):
     config_raw = f"""
 infrastructure:
     num_workers: {num_workers} 
-    enable_metrics: false
+    enable_metrics: true
+    save_filtered_uids: true
     logging_level: WARNING
-    save_npy: false
-    apply_filters: false
+    apply_filters: true
     
 unimodal:
     batch_size: {batch_size} 
@@ -24,7 +24,15 @@ unimodal:
     good_captions_pos_distribution_path: models/common_pos_patterns.txt
 
     image_min_aspect_ratio: 0.8
-    image_max_aspect_ratio: 1.8
+    image_max_aspect_ratio: 3.0
+    image_min_dimension: 50
+
+    text_threshold: 0.6
+    text_detection_model_path: models
+    text_detection_mag_ratio: 0.5
+
+    specificity_threshold: 0.5           
+    curvature: 1.0    
 
 multimodal:
     batch_size: 32
@@ -42,6 +50,12 @@ def create_output_folder():
     output_folder = Path(__file__).parent / f"out_{timestamp}"
     output_folder.mkdir(exist_ok=True, parents=True)
     return output_folder
+
+def create_result_file(output_folder):
+    result_file = output_folder / "benchmark_results.csv"
+    with open(result_file, "w", encoding="utf-8") as f:
+        f.write("num_workers,batch_size,iteration_index,took\n")
+    return result_file
 
 def create_results_and_log_folders(output_folder: Path, suffix: str = ""):
     results_folder = output_folder / f"results_{suffix}"

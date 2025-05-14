@@ -47,9 +47,8 @@ def main(args):
     logger.info(f"Pipeline completed. Took {took:0.2f} seconds")
 
 
-    if config.infrastructure.save_npy:
-        logger.info("Saving uids")
-        save_uids(ok_uids, args.output_folder)
+    logger.info("Saving uids")
+    save_uids(ok_uids, args.output_folder)
 
     cleanup()
 

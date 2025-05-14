@@ -10,3 +10,4 @@ ok_uids.npy
 benchmark/data/*
 test/data/_*
 test/data/*[0-9].tar
+benchmark/data_test

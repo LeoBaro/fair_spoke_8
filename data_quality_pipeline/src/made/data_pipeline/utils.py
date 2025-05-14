@@ -23,6 +23,7 @@ def connect_or_start_ray(ray_address, logging_level):
         )
 
 def cleanup():
+    print("Cleaning up..")
     shutdown_ray()
     Singleton.destroy_instance(Config)
 

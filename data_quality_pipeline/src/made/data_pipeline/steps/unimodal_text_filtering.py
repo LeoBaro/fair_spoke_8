@@ -3,7 +3,9 @@ import ray
 import logging
 import fasttext
 import spacy
+import json 
 from itertools import chain
+from collections import defaultdict
 from datetime import datetime
 
 from made.config import Config
@@ -67,6 +69,8 @@ def unimodal_text_filtering(
 
     # logger.info("Iterating over dataset")
     all_uids = []
+    filtered_uids_by_filter = defaultdict(list)
+
     sample_count = 0
     batch_id = 0
     dataset_iter = iter(dataset)
@@ -83,7 +87,7 @@ def unimodal_text_filtering(
 
         # ------------------------------------------- 
         # first step: filter by caption length
-        ok_uids, ok_samples, uids_filtered, samples_filtered = apply_filtering_step(
+        batch_ok_uids, batch_ok_samples, batch_uids_filtered, batch_samples_filtered = apply_filtering_step(
             filter_name=_get_filter_captions_by_length_mask,
             batch_id=batch_id,
             uids=batch[0],
@@ -94,14 +98,16 @@ def unimodal_text_filtering(
                 "min_chars": config.unimodal.caption_min_chars
             }
         )
+        if config.infrastructure.save_filtered_uids:
+            filtered_uids_by_filter["length"].extend(batch_uids_filtered)
 
         # ------------------------------------------- 
         # second step: filter by language
-        ok_uids, ok_samples, uids_filtered, samples_filtered = apply_filtering_step(
+        batch_ok_uids, batch_ok_samples, batch_uids_filtered, batch_samples_filtered = apply_filtering_step(
             filter_name=_get_filter_captions_by_language_mask,
             batch_id=batch_id,
-            uids=ok_uids,
-            samples=ok_samples,
+            uids=batch_ok_uids,
+            samples=batch_ok_samples,
             apply_filters=config.infrastructure.apply_filters,
             parameters = {
                 "model": language_detection_model,
@@ -109,23 +115,27 @@ def unimodal_text_filtering(
                 "threshold": config.unimodal.lang_detection_score_threshold
             }
         )
+        if config.infrastructure.save_filtered_uids:
+            filtered_uids_by_filter["language"].extend(batch_uids_filtered)
 
 
         # ------------------------------------------- 
         # third step: pos tags filtering
-        ok_uids, ok_samples, uids_filtered, samples_filtered = apply_filtering_step(
+        batch_ok_uids, batch_ok_samples, batch_uids_filtered, batch_samples_filtered = apply_filtering_step(
             filter_name = _get_filter_captions_by_pos_tags_mask,
             batch_id=batch_id,
-            uids=ok_uids,
-            samples=ok_samples,
+            uids=batch_ok_uids,
+            samples=batch_ok_samples,
             apply_filters= config.infrastructure.apply_filters,
             parameters = {
                 "model": pos_tagging_model,
                 "target_pos_tags": pos_distribution
             }
         )
+        if config.infrastructure.save_filtered_uids:
+            filtered_uids_by_filter["pos_tags"].extend(batch_uids_filtered)
 
-        all_uids.append(ok_uids)
+        all_uids.append(batch_ok_uids)
 
     # logger.info("Concatenating uids")
     all_uids = list(chain.from_iterable(all_uids))
@@ -133,6 +143,13 @@ def unimodal_text_filtering(
 
     if config.infrastructure.enable_metrics:
         MetricsStore().save_to_file(log_folder)
+
+    if config.infrastructure.save_filtered_uids:
+        filtered_uids_path = log_folder / "unimodal_text_filtering__filtered_uids_by_step.json"
+        with open(filtered_uids_path, 'w', encoding="utf-8") as f:
+            json.dump(filtered_uids_by_filter, f, indent=2)
+        logger.info(f"Filtered UIDs saved to {filtered_uids_path}")
+
     return all_uids
 
 # TODO: implement a function than clean the captions and 

@@ -1,5 +1,6 @@
 from pathlib import Path
-import logging
+import logging  
+import json
 import ray
 import easyocr
 import numpy as np
@@ -7,6 +8,7 @@ from numpy.typing import NDArray
 from PIL import Image
 from itertools import chain
 from datetime import datetime
+from collections import defaultdict
 
 from made.config import Config
 from made.data_pipeline.metrics.metrics_store import MetricsStore
@@ -53,7 +55,9 @@ def unimodal_vision_filtering(
     )   
     
     # logger.info("Iterating over dataset")
-    all_uids = []
+    ok_uids = []
+    filtered_uids_by_filter = defaultdict(list)
+
     sample_count = 0
     batch_id = 0
     dataset_iter = iter(dataset)
@@ -69,7 +73,7 @@ def unimodal_vision_filtering(
 
         # ------------------------------------------------------------------------ 
         # first step: filter by aspect ratio
-        ok_uids, ok_samples, uids_filtered, samples_filtered = apply_filtering_step(
+        batch_ok_uids, batch_ok_samples, batch_uids_filtered, batch_samples_filtered = apply_filtering_step(
             filter_name=_get_images_by_aspect_ratio_filter_mask,
             batch_id=batch_id,
             uids=batch[0],
@@ -81,14 +85,30 @@ def unimodal_vision_filtering(
                 "image_min_dimension": config.unimodal.image_min_dimension
             }
         )
+        if config.infrastructure.save_filtered_uids:
+            filtered_uids_by_filter["aspect_ratio"].extend(batch_uids_filtered)
+
+
+        # filter_mask: list[bool]
+        # filter_mask = _get_images_by_aspect_ratio_filter_mask(
+        #     images,
+        #     Config().unimodal.image_min_aspect_ratio,
+        #     Config().unimodal.image_max_aspect_ratio
+        # )
+        # ok_uids, ok_images, uids_filtered, images_filtered = apply_filter_mask(
+        #     uids, images, filter_mask,
+        #     filter_name="_get_images_by_aspect_ratio_filter_mask",
+        #     batch_id=batch_id
+        # )
+
 
         # ------------------------------------------- 
         # second step: remove images containing text
-        ok_uids, ok_samples, uids_filtered, samples_filtered = apply_filtering_step(
-            filter_name=_get_images_by_text_filter_mask_batched,
+        batch_ok_uids, batch_ok_samples, batch_uids_filtered, batch_samples_filtered = apply_filtering_step(
+            filter_name=_get_images_by_text_filter_mask,
             batch_id=batch_id,
-            uids=ok_uids,
-            samples=ok_samples,
+            uids=batch_ok_uids,
+            samples=batch_ok_samples,
             apply_filters=config.infrastructure.apply_filters,
             parameters = {
                 "model": text_detection_model,
@@ -96,23 +116,30 @@ def unimodal_vision_filtering(
                 "mag_ratio": config.unimodal.text_detection_mag_ratio
             }
         )
-
+        if config.infrastructure.save_filtered_uids:
+            filtered_uids_by_filter["text_detection"].extend(batch_uids_filtered)
 
         # ------------------------------------------- 
         # third step: image specificity filtering
         # TODO: implement this
 
+        ok_uids.append(batch_ok_uids)
 
-        all_uids.append(ok_uids)
 
+    ok_uids = list(chain.from_iterable(ok_uids))
 
-    # logger.info("Concatenating uids")
-    all_uids = list(chain.from_iterable(all_uids))
     logger.info(f"[{datetime.now()}] Total samples processed: %s", sample_count)
 
     if config.infrastructure.enable_metrics:
         MetricsStore().save_to_file(log_folder)
-    return all_uids
+
+    if config.infrastructure.save_filtered_uids:
+        filtered_uids_path = log_folder / "unimodal_vision_filtering__filtered_uids_by_step.json"
+        with open(filtered_uids_path, 'w', encoding="utf-8") as f:
+            json.dump(filtered_uids_by_filter, f, indent=2)
+        logger.info(f"Filtered UIDs saved to {filtered_uids_path}")
+
+    return ok_uids
 
 
 def _get_images_by_aspect_ratio_filter_mask(

@@ -25,7 +25,8 @@ class ActorGroup:
     def execute_parallel(self, tar_files: list[str | Path], log_folder: str | Path, uids: list[str]):
         #print("Executing actor group. Num. actors: ", len(self.actors))
         tar_splits = [tar_files[i::len(self.actors)] for i in range(len(self.actors))]
-        #print("Number of tar splits per actor: ", [len(tar_split) for tar_split in tar_splits])
+        
+        print("Number of tar splits per actor: ", [len(tar_split) for tar_split in tar_splits])
         self.futures = [
             actor.execute.remote(tar_split, log_folder, uids) for actor, tar_split in zip(self.actors, tar_splits)
         ]
@@ -96,20 +97,21 @@ class ActorGroupPipeline:
 
             print("Executing parallel actor groups:")
             for actor_group in self.pipeline_steps[step_index]["actor_groups"]:
-                print(f"{actor_group}")
+                print(f"  - {actor_group}")
 
             for actor_group in self.pipeline_steps[step_index]["actor_groups"]:
                 actor_group.execute_parallel(tar_files, log_folder, uids)
 
             uids = [actor_group.get_results() for actor_group in self.pipeline_steps[step_index]["actor_groups"]]
 
-            print("Got the following number of samples from actor groups:")
+            print("Got the following number of filtered samples from actor groups:")
             for uid, actor_group in zip(uids, self.pipeline_steps[step_index]["actor_groups"]):
-                print(f"{actor_group}: {len(uid)}")
+                print(f"  - {actor_group}: {len(uid)}")
 
             if pipeline_step["merge_strategy"] == "intersection":
                 print("Merging results with intersection")
                 uids = set(uids[0]).intersection(*uids[1:])
+                
             elif pipeline_step["merge_strategy"] == "union":
                 print("Merging results with union")
                 uids = set(uids[0]).union(*uids[1:])
