@@ -72,7 +72,7 @@ def apply_filtering_step(
         {"parameters": parameters}
     )
 
-    if apply_filters == "same_input":
+    if not apply_filters:
         ok_uids = uids
         ok_samples = samples
         uids_filtered = []
