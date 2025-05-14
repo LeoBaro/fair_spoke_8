@@ -25,16 +25,27 @@ class SpecificityFilter(FilteringBlock):
 
     def execute(self, tar_files: list[str | Path], log_folder: Path):
         _ = MetricsStore()  # Metrics tracking if enabled
-        return specificity_filtering(tar_files, log_folder, self.config, self.img_ref, self.txt_ref)
+        return specificity_filtering(
+            tar_files,
+            log_folder,
+            self.config,
+            self.img_ref,
+            self.txt_ref
+        )
 
 
-
-def specificity_filtering(tar_files: list[str | Path], log_folder: Path, config: Config, img_ref: torch.Tensor, txt_ref: torch.Tensor):
+def specificity_filtering(
+        tar_files: list[str | Path],
+        log_folder: Path,
+        config: Config,
+        img_ref: torch.Tensor,
+        txt_ref: torch.Tensor
+):
     logger = logging.getLogger("ray")
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    img_ref.to(device)
-    txt_ref.to(device)
+    img_ref = img_ref.to(device)
+    txt_ref = txt_ref.to(device)
 
     # Validate configuration
     _validate_configuration(config)
@@ -63,7 +74,7 @@ def specificity_filtering(tar_files: list[str | Path], log_folder: Path, config:
         # Convert batch images to tensors and move them to device
         batch_images = [torch.tensor(np.array(img)).to(device) for img in batch[1]]
         captions = batch[2]
-        
+
         # Apply specificity filtering
         ok_uids, ok_samples, uids_filtered, samples_filtered = apply_filtering_step(
             filter_name=_get_images_by_specificity_filter_mask,
@@ -73,6 +84,8 @@ def specificity_filtering(tar_files: list[str | Path], log_folder: Path, config:
             parameters={
                 "specificity_threshold": config.multimodal.specificity_threshold,
                 "curvature": config.multimodal.curvature,
+                "img_ref": img_ref,
+                "txt_ref": txt_ref,
             }
         )
 
@@ -83,7 +96,7 @@ def specificity_filtering(tar_files: list[str | Path], log_folder: Path, config:
 
     if config.infrastructure.enable_metrics:
         MetricsStore().save_to_file(log_folder)
-    
+
     return all_uids
 
 
@@ -91,11 +104,14 @@ def _get_images_by_specificity_filter_mask(
         images: list[torch.Tensor],
         specificity_threshold: float,
         curvature: float
-    ) -> list[bool]:
-    """
-    Filter images based on specificity.
-    """
-    return [specificity(image=image, curv=curvature) > specificity_threshold for image in images]
+        img_ref: torch.Tensor,
+        txt_ref: torch.Tensor
+        ) -> list[bool]:
+"""
+Filter images based on specificity.
+"""
+return [specificity(image=image, curv=curvature, img_ref=img_ref, txt_ref=txt_ref) > specificity_threshold for image in
+        images]
 
 
 def _validate_configuration(config: Config):
@@ -105,14 +121,13 @@ def _validate_configuration(config: Config):
         raise ValueError("Curvature must be a positive value")
 
 
-def specificity(image, text, curv: float):
-
+def specificity(image, text, curv: float, img_ref: torch.Tensor, txt_ref: torch.Tensor):
     if image is not None:
-        txt_ref = txt_ref.to(image.device)  # Ensure txt_ref is on the same device as the image
+        txt_ref = txt_ref.to(image.device)
         ient = entailment(txt_ref, image, curv)
         return ient.mean(dim=0)
     else:
-        img_ref = img_ref.to(text.device)  # Ensure img_ref is on the same device as the text
+        img_ref = img_ref.to(text.device)
         tent = entailment(text, img_ref, curv)
         return tent.mean(dim=1)
 
@@ -138,8 +153,9 @@ def expm(v, curvature, time_keepdim=False):
     v, curvature = v.float(), curvature.float()
     x_space_temp = torch.sqrt(curvature) * torch.norm(v, dim=-1, keepdim=True)
     x_space = (
-        torch.sinh(torch.clamp(x_space_temp, min=1e-8, max=math.asinh(2**15))) * v / torch.clamp(x_space_temp, min=1e-8)
+            torch.sinh(torch.clamp(x_space_temp, min=1e-8, max=math.asinh(2 ** 15))) * v / torch.clamp(x_space_temp,
+                                                                                                       min=1e-8)
     )
-    x_time = torch.sqrt(1 / curvature + torch.sum(x_space**2, dim=-1, keepdim=time_keepdim))
+    x_time = torch.sqrt(1 / curvature + torch.sum(x_space ** 2, dim=-1, keepdim=time_keepdim))
     return x_space, x_time
 
