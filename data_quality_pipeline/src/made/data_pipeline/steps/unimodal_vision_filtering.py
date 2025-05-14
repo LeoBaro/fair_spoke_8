@@ -81,21 +81,6 @@ def unimodal_vision_filtering(
             }
         )
 
-
-
-        # filter_mask: list[bool]
-        # filter_mask = _get_images_by_aspect_ratio_filter_mask(
-        #     images,
-        #     Config().unimodal.image_min_aspect_ratio,
-        #     Config().unimodal.image_max_aspect_ratio
-        # )
-        # ok_uids, ok_images, uids_filtered, images_filtered = apply_filter_mask(
-        #     uids, images, filter_mask,
-        #     filter_name="_get_images_by_aspect_ratio_filter_mask",
-        #     batch_id=batch_id
-        # )
-
-
         # ------------------------------------------- 
         # second step: remove images containing text
         ok_uids, ok_samples, uids_filtered, samples_filtered = apply_filtering_step(
@@ -174,6 +159,77 @@ def _get_images_by_text_filter_mask(
 
     return mask
 
+def get_max_dimension(images: list[NDArray]) -> int:
+    """
+    Get the maximum dimension (width or height) across all images in a list.
+    
+    Args:
+        images: List of numpy array images with shape (h, w, c)
+        
+    Returns:
+        Maximum dimension value
+    """
+    max_width = max(img.shape[1] for img in images)  # Width is at index 1
+    max_height = max(img.shape[0] for img in images)  # Height is at index 0
+    
+    return max(max_width, max_height)
+
+def pad_images_to_min_size(
+    images,
+    target_width,
+    target_height):
+    """
+    Add padding to images that have dimensions less than the specified width and height.
+    
+    Args:
+        images: List of numpy array images
+        target_width: Minimum width for the padded images
+        target_height: Minimum height for the padded images
+        
+    Returns:
+        List of padded numpy array images
+    """
+    padded_images = []
+    
+    for img in images:
+        height, width = img.shape[:2]
+        
+        # Calculate padding dimensions
+        pad_width = max(0, target_width - width)
+        pad_height = max(0, target_height - height)
+        
+        if pad_width > 0 or pad_height > 0:
+            # Calculate padding for each side
+            top = pad_height // 2
+            bottom = pad_height - top
+            left = pad_width // 2
+            right = pad_width - left
+            
+            # Get number of channels (handle both RGB and grayscale)
+            if len(img.shape) == 3:
+                # RGB image
+                padded_img = np.pad(
+                    img,
+                    ((top, bottom), (left, right), (0, 0)),
+                    mode='constant',
+                    constant_values=255
+                )
+            else:
+                # Grayscale image
+                padded_img = np.pad(
+                    img,
+                    ((top, bottom), (left, right)),
+                    mode='constant',
+                    constant_values=255
+                )
+            
+            padded_images.append(padded_img)
+        else:
+            # No padding needed
+            padded_images.append(img)
+            
+    return padded_images
+
 def _get_images_by_text_filter_mask_batched(
         images: list[Image.Image],
         model: easyocr.Reader,
@@ -186,11 +242,13 @@ def _get_images_by_text_filter_mask_batched(
 
     mask = [True] * len(images)
     img_array = [np.array(image) for image in images]
-    
+    max_dimension = get_max_dimension(img_array)
+    img_array = pad_images_to_min_size(img_array, max_dimension, max_dimension)
+
     text_results = model.readtext_batched(
         img_array,
-        n_width=256,
-        n_height=256,
+        # n_width=256*3,
+        # n_height=256*3,
         decoder = 'greedy',
         mag_ratio=mag_ratio,
         batch_size = len(img_array),

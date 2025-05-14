@@ -79,7 +79,7 @@ infrastructure:
     apply_filters: true
 
 unimodal:
-    batch_size: 500
+    batch_size: 50
 
     caption_min_words: 2
     caption_min_chars: 5
