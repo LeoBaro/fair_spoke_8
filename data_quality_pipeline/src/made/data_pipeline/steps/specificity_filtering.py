@@ -19,7 +19,7 @@ from made.data_pipeline.data.datacomp_handler import decode_webdataset, get_next
 class SpecificityFilter(FilteringBlock):
     def __init__(self, config_path: Path):
         self.config = Config(config_path)
-        ref_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "reference.pt")
+        ref_path = "/davinci-1/work/fdimatteo/hype_weights/reference.pt"
         ref = torch.load(ref_path)
         self.img_ref, self.txt_ref = ref["img"], ref["txt"]
 
