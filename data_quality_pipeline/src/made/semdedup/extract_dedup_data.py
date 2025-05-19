@@ -8,7 +8,7 @@ import os
 from tqdm import tqdm
 import pickle
 import numpy as np
-from constants import IMAGE_NAME_INDEX
+from made.semdedup.constants import IMAGE_NAME_INDEX
 
 
 def extract_pruned_data(

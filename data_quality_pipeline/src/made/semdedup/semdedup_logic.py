@@ -9,11 +9,14 @@ import torch
 import numpy as np
 import pandas as pd
 
-from constants import DIST_METRIC_INDEX, IMAGE_ID_IN_CLUSTER_INDEX, IMAGE_NAME_INDEX
-from my_utils import load_config
+from made.semdedup.constants import (
+    DIST_METRIC_INDEX, 
+    IMAGE_ID_IN_CLUSTER_INDEX, 
+    IMAGE_NAME_INDEX
+)
 from tqdm import tqdm
 
-config = load_config("semdedup_configs.yaml")
+# config = load_config("semdedup_configs.yaml")
 
 def init_memmap_embs(
     embs_memory_loc: str, 
