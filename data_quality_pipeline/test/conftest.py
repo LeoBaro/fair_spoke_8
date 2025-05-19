@@ -74,12 +74,12 @@ def config_path(request):
 infrastructure:
     num_workers: 2
     enable_metrics: true
+    save_filtered_uids: false
     logging_level: DEBUG
-    save_npy: true
     apply_filters: true
 
 unimodal:
-    batch_size: 500
+    batch_size: 50
 
     caption_min_words: 2
     caption_min_chars: 5
@@ -95,7 +95,7 @@ unimodal:
     image_max_aspect_ratio: 3.0
     image_min_dimension: 50
 
-    text_threshold: 0.7
+    text_threshold: 0.6
     text_detection_model_path: models
     text_detection_mag_ratio: 0.5
                 
