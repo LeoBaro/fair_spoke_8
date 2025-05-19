@@ -1,12 +1,15 @@
 from pathlib import Path
 import logging
+import os
 import ray
+import json
 import torch
 import numpy as np
 from numpy.typing import NDArray
 from PIL import Image
 from itertools import chain
 from datetime import datetime
+from collections import defaultdict
 
 from transformers import CLIPProcessor, CLIPModel
 
@@ -24,8 +27,9 @@ class MultimodalFilter(FilteringBlock):
         device = "cuda" if torch.cuda.is_available() else "cpu"
         if device == "cpu":
             raise ValueError("Multimodal filtering is not supported on CPU")
+        os.environ["TOKENIZERS_PARALLELISM="] = "false"
         self.model = CLIPModel.from_pretrained(self.config.multimodal.clip_model).to(device)
-        self.processor = CLIPProcessor.from_pretrained(self.config.multimodal.clip_model)
+        self.processor = CLIPProcessor.from_pretrained(self.config.multimodal.clip_model) #  use_fast=True
 
     def execute(self, tar_files: list[str | Path], log_folder: Path, uids: list[str] = None):
         _ = MetricsStore()
@@ -59,7 +63,9 @@ def multimodal_filtering(
     )   
     
     # logger.info("Iterating over dataset")
-    all_uids = []
+    ok_uids = []
+    filtered_uids_by_filter = defaultdict(list)
+
     sample_count = 0
     batch_id = 0
     dataset_iter = iter(dataset)
@@ -75,7 +81,7 @@ def multimodal_filtering(
 
         # ------------------------------------------------------------------------ 
         # first step: filter by aspect ratio
-        ok_uids, ok_samples, uids_filtered, samples_filtered = apply_filtering_step(
+        batch_ok_uids, batch_ok_samples, batch_uids_filtered, batch_samples_filtered = apply_filtering_step(
             filter_name=_get_clip_score_filter_mask,
             batch_id=batch_id,
             uids=batch[0],
@@ -84,37 +90,44 @@ def multimodal_filtering(
             parameters = {
                 "clip_model": clip_model,
                 "clip_processor": clip_processor,
-                "clip_score_threshold": config.multimodal.clip_score_threshold
+                "clip_score_threshold": config.multimodal.clip_score_threshold,
+                "clip_caption_max_length": config.multimodal.clip_caption_max_length
             }
         )
-
-        # ------------------------------------------- 
-        # second step: remove images containing text
-        # TODO: implement this
-
+        if config.infrastructure.save_filtered_uids:
+            filtered_uids_by_filter["text_detection"].extend(batch_uids_filtered)
 
         # ------------------------------------------- 
         # third step: image specificity filtering
         # TODO: implement this
 
 
-        all_uids.append(ok_uids)
+        ok_uids.append(batch_ok_uids)
 
 
     # logger.info("Concatenating uids")
-    all_uids = list(chain.from_iterable(all_uids))
+    ok_uids = list(chain.from_iterable(ok_uids))
+
     logger.info(f"[{datetime.now()}] Total samples processed: %s", sample_count)
 
     if config.infrastructure.enable_metrics:
         MetricsStore().save_to_file(log_folder)
-    return all_uids
+
+    if config.infrastructure.save_filtered_uids:
+        filtered_uids_path = log_folder / "multimodal_filtering__filtered_uids_by_step.json"
+        with open(filtered_uids_path, 'w', encoding="utf-8") as f:
+            json.dump(filtered_uids_by_filter, f, indent=2)
+        logger.info("Filtered UIDs saved to %s", filtered_uids_path)
+
+    return ok_uids
 
 
 def _get_clip_score_filter_mask(
         batch: list[Image.Image],
         clip_model,
         clip_processor,
-        clip_score_threshold: float
+        clip_score_threshold: float,
+        clip_caption_max_length: int
     ) -> list[bool]:
     """
     Filter the images by aspect ratio.
@@ -131,7 +144,7 @@ def _get_clip_score_filter_mask(
             return_tensors="pt",
             padding=True,
             truncation=True,
-            max_length=77
+            max_length=clip_caption_max_length
         ).to(device)
         outputs = clip_model(**inputs)
         score = outputs.logits_per_image.item()

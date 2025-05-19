@@ -137,7 +137,7 @@ def unimodal_vision_filtering(
         filtered_uids_path = log_folder / "unimodal_vision_filtering__filtered_uids_by_step.json"
         with open(filtered_uids_path, 'w', encoding="utf-8") as f:
             json.dump(filtered_uids_by_filter, f, indent=2)
-        logger.info(f"Filtered UIDs saved to {filtered_uids_path}")
+        logger.info("Filtered UIDs saved to %s", filtered_uids_path)
 
     return ok_uids
 
