@@ -1,23 +1,28 @@
-import logging
 import os
-import time
-import numpy as np
-import torch
-import pprint
 import ray
+import time
+import logging
+import torch
+import numpy as np
+
 from pathlib import Path
 from functools import partial
 from transformers import CLIPModel, CLIPImageProcessor
 from torch.utils.data import DataLoader
+
+from made.paths import MADE_PATH
+from made.config import Config
 from made.semdedup.compute_pretrained_embeddings import get_embeddings
-from made.semdedup.dataloader import TarImageDataset, custom_collate_fn
+from made.semdedup.dataloader import (
+    TarImageDataset,
+    FilteredTarImageDataset, 
+    custom_collate_fn)
 from made.semdedup.clustering.clustering import compute_centroids
 from made.semdedup.clustering.sort_clusters import assign_and_sort_clusters
 from made.semdedup.semdedup_logic import process_shard
 from made.semdedup.extract_dedup_data import extract_pruned_data
 from made.data_pipeline.steps.base import apply_filtering_step, FilteringBlock
-from made.paths import MADE_PATH
-from made.config import Config
+from made.data_pipeline.metrics.metrics_store import MetricsStore
 
 
 @ray.remote(num_gpus=0.1)
@@ -25,40 +30,38 @@ class SemDeDupFilter(FilteringBlock):
     def __init__(self, config_path: Path):
         self.config = Config(config_path)
 
-    def execute(self, tar_files: list[str | Path], log_folder: Path):
-        return run_complete_pipeline(tar_files, self.config)
+    def execute(
+            self, 
+            tar_files: list[str | Path], 
+            log_folder: Path, 
+            uids: list[str] = None
+        ):
+        _ = MetricsStore()
+        return remove_image_duplicates(
+            tar_files, 
+            self.config,
+            log_folder,
+            uids
+            )
 
 # --- Setup Logging ---
 logging.basicConfig(level=logging.INFO, 
                     format='%(asctime)s - %(levelname)s - %(message)s')
-logger = logging.getLogger(__name__)
 
 # --- Main Pipeline Function ---
-def run_complete_pipeline(
+def remove_image_duplicates(
         tar_files_directory: str,
-        config: Config
+        config: Config,
+        log_folder: Path,
+        uids: list[str] = None
 ):
+    
+    logger = logging.getLogger("ray")
     """
     Runs the entire SemDeDup pipeline sequentially within a single process.
     """
     start_time = time.time()
     logger.info("Starting the SemDeDup pipeline...")
-
-    # # --- Load Configurations (Once) ---
-    # NOTE: This is not needed because the config is passed as an argument
-    # try:
-    #     config = Config(MADE_PATH / "config.yaml")
-    #     logger.info("Configurations loaded.")
-    #     pp = pprint.PrettyPrinter(indent=4)
-    #     logger.info("Main Config:")
-    #     pp.pprint(config)
-
-    # except FileNotFoundError as e:
-    #     logger.error(f"Configuration file not found: {e}. Exiting.")
-    #     return
-    # except Exception as e:
-    #     logger.error(f"Error loading configuration: {e}. Exiting.")
-    #     return
 
     # --- Stage 1: Generate Embeddings ---
     try:
@@ -82,15 +85,16 @@ def run_complete_pipeline(
 
         logger.info("Setting up dataset and dataloader...")
         dataset = TarImageDataset(tar_dir=tar_files_directory, transform=None)
+        filt_dataset = FilteredTarImageDataset(dataset, uids)
         my_collate_fn = partial(custom_collate_fn, image_processor=image_processor)
         dataloader = DataLoader(
-            dataset,
+            filt_dataset,
             batch_size=batch_size,
             shuffle=False,
             collate_fn=my_collate_fn,
             num_workers=config.unimodal.semdedup.num_workers
         )
-        dataset_size = len(dataset)
+        dataset_size = len(filt_dataset)
         config.unimodal.semdedup.dataset_size = dataset_size
 
         logger.info(f"Dataset size: {dataset_size}")
@@ -123,7 +127,7 @@ def run_complete_pipeline(
         path_array.flush()
         del emb_array
         del path_array
-        del model, image_processor, dataloader, dataset
+        del model, image_processor, dataloader, dataset, filt_dataset
         if torch.cuda.is_available():
              torch.cuda.empty_cache()
 
@@ -146,14 +150,14 @@ def run_complete_pipeline(
         )
 
         compute_centroids(
-            data=emb_memory,
-            ncentroids=config.unimodal.semdedup.clustering.num_clusters,
-            niter=config.unimodal.semdedup.clustering.niter,   
-            seed=config.unimodal.semdedup.clustering.seed,
-            Kmeans_with_cos_dist=config.unimodal.semdedup.clustering.Kmeans_with_cos_dist,
-            save_folder=config.unimodal.semdedup.clustering.save_folder,
-            logger=logger,
-            verbose=True
+            data = emb_memory,
+            ncentroids = config.unimodal.semdedup.clustering.num_clusters,
+            niter = config.unimodal.semdedup.clustering.niter,   
+            seed = config.unimodal.semdedup.clustering.seed,
+            Kmeans_with_cos_dist = config.unimodal.semdedup.clustering.Kmeans_with_cos_dist,
+            save_folder = config.unimodal.semdedup.clustering.save_folder,
+            logger = logger,
+            verbose = True
         )
         # del emb_memory # Close memmap
 
@@ -239,6 +243,10 @@ def run_complete_pipeline(
     total_time = time.time() - start_time
     logger.info(f"--- Pipeline finished successfully in {total_time:.2f} seconds ({total_time/60:.2f} minutes) ---")
 
+    if config.infrastructure.enable_metrics:
+        MetricsStore().save_to_file(log_folder)
+    
+    return
 
 if __name__ == "__main__":
-    run_complete_pipeline()
+    remove_image_duplicates()
