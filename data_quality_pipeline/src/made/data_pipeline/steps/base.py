@@ -3,8 +3,15 @@ import time
 from made.data_pipeline.metrics.metrics_store import MetricsStore
 from abc import ABC, abstractmethod
 from pathlib import Path
+import torch
 
 class FilteringBlock(ABC):
+
+    def __init__(self):
+        self.device = "cuda" if torch.cuda.is_available() else "cpu"
+        if self.device == "cpu":
+            raise ValueError("Filtering block is not supported on CPU")
+
     @abstractmethod
     def execute(self, tar_files: list[str | Path], log_folder: Path, uids: list[str] = None):
         pass
