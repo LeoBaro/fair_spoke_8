@@ -101,9 +101,9 @@ unimodal:
                 
 multimodal:
     batch_size: 256
-                
-    clip_model: openai/clip-vit-base-patch32
+    clip_model: leobaro/DFN-public
     clip_score_threshold: 0.3
+    clip_caption_max_length: 77
 
 """)
     return config_file_for_tests_path
