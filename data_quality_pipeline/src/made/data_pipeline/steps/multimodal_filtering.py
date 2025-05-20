@@ -121,12 +121,11 @@ def multimodal_filtering(
 
     return ok_uids
 
-
 def _get_clip_score_filter_mask(
         batch: list[Image.Image],
         dfn_model,
         clip_processor,
-        dfn_percentile_to_drop: float,
+        dfn_percentile_to_drop: int,
         clip_caption_max_length: int
     ) -> list[bool]:
     """
@@ -149,11 +148,26 @@ def _get_clip_score_filter_mask(
         outputs = dfn_model(**inputs)
         score = outputs.logits_per_image.item()
         similarity_scores.append(score)
+    
+    return _filter_by_percentile(similarity_scores, dfn_percentile_to_drop)
 
-    return [
-        (score > dfn_percentile_to_drop)
-        for score in similarity_scores
-    ]
+def _filter_by_percentile(scores, percentile):
+    """
+    Returns a boolean mask indicating which samples to keep based on percentile filtering.
+
+    Parameters:
+    - scores (list of float): The list of scores (can be positive or negative).
+    - percentile (int): Percentile value (0-100). Scores below this percentile will be discarded.
+
+    Returns:
+    - list of bool: Boolean mask, True if the sample should be kept, False otherwise.
+    """
+    if not 0 <= percentile <= 100:
+        raise ValueError("Percentile must be between 0 and 100.")
+
+    threshold = np.percentile(scores, percentile)
+    mask = [score > threshold for score in scores]
+    return mask
 
 def _validate_configuration(config: Config):
     if config.multimodal.dfn_percentile_to_drop < 0.0 or config.multimodal.dfn_percentile_to_drop > 1.0:

@@ -18,7 +18,7 @@ def test_multimodal_filtering(tar_files, log_folder, config):
     processor = CLIPProcessor.from_pretrained(config.multimodal.dfn_model)
 
     results = multimodal_filtering(model, processor, tar_files, log_folder, config)
-    assert len(results) == 10
+    assert len(results) == 949
 
 
 def test_ray_multimodal_filtering(ray_init, ray_flag, tar_files, log_folder, config_path):
@@ -33,4 +33,4 @@ def test_ray_multimodal_filtering(ray_init, ray_flag, tar_files, log_folder, con
         ]
     )
 
-    assert len(results[0]) == 10
+    assert len(results[0]) == 949

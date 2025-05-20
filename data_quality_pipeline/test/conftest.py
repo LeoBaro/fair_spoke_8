@@ -102,7 +102,7 @@ unimodal:
 multimodal:
     batch_size: 256
     dfn_model: leobaro/DFN-public
-    dfn_percentile_to_drop: 0.3
+    dfn_percentile_to_drop: 25
     clip_caption_max_length: 77
 
 """)
