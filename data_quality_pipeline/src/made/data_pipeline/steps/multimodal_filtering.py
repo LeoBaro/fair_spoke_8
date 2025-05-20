@@ -28,8 +28,8 @@ class MultimodalFilter(FilteringBlock):
         if device == "cpu":
             raise ValueError("Multimodal filtering is not supported on CPU")
         os.environ["TOKENIZERS_PARALLELISM="] = "false"
-        self.model = CLIPModel.from_pretrained(self.config.multimodal.clip_model).to(device)
-        self.processor = CLIPProcessor.from_pretrained(self.config.multimodal.clip_model) #  use_fast=True
+        self.model = CLIPModel.from_pretrained(self.config.multimodal.dfn_model).to(device)
+        self.processor = CLIPProcessor.from_pretrained(self.config.multimodal.dfn_model) #  use_fast=True
 
     def execute(self, tar_files: list[str | Path], log_folder: Path, uids: list[str] = None):
         _ = MetricsStore()
@@ -44,7 +44,7 @@ class MultimodalFilter(FilteringBlock):
 
 
 def multimodal_filtering(
-        clip_model,
+        dfn_model,
         clip_processor,
         tar_files: list[str | Path],
         log_folder: Path, 
@@ -88,9 +88,9 @@ def multimodal_filtering(
             samples=batch,
             apply_filters=config.infrastructure.apply_filters,
             parameters = {
-                "clip_model": clip_model,
+                "dfn_model": dfn_model,
                 "clip_processor": clip_processor,
-                "clip_score_threshold": config.multimodal.clip_score_threshold,
+                "dfn_percentile_to_drop": config.multimodal.dfn_percentile_to_drop,
                 "clip_caption_max_length": config.multimodal.clip_caption_max_length
             }
         )
@@ -124,9 +124,9 @@ def multimodal_filtering(
 
 def _get_clip_score_filter_mask(
         batch: list[Image.Image],
-        clip_model,
+        dfn_model,
         clip_processor,
-        clip_score_threshold: float,
+        dfn_percentile_to_drop: float,
         clip_caption_max_length: int
     ) -> list[bool]:
     """
@@ -146,15 +146,15 @@ def _get_clip_score_filter_mask(
             truncation=True,
             max_length=clip_caption_max_length
         ).to(device)
-        outputs = clip_model(**inputs)
+        outputs = dfn_model(**inputs)
         score = outputs.logits_per_image.item()
         similarity_scores.append(score)
 
     return [
-        (score > clip_score_threshold)
+        (score > dfn_percentile_to_drop)
         for score in similarity_scores
     ]
 
 def _validate_configuration(config: Config):
-    if config.multimodal.clip_score_threshold < 0.0 or config.multimodal.clip_score_threshold > 1.0:
+    if config.multimodal.dfn_percentile_to_drop < 0.0 or config.multimodal.dfn_percentile_to_drop > 1.0:
         raise ValueError("The aspect ratio threshold must be between 0.0 and 1.0")
