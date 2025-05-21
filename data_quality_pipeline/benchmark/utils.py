@@ -46,9 +46,9 @@ multimodal:
         f.write(config_raw)
     return config_file_path
 
-def create_output_folder():
+def create_output_folder(filtering_step_name: str):
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    output_folder = Path(__file__).parent / f"out_{timestamp}"
+    output_folder = Path(__file__).parent / f"out_{timestamp}_{filtering_step_name.lower()}"
     output_folder.mkdir(exist_ok=True, parents=True)
     return output_folder
 

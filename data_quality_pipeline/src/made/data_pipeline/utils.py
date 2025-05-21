@@ -77,7 +77,7 @@ def save_uids(uids: list[str], output_folder: str | Path):
     """
     output_folder = Path(output_folder)
     output_folder.mkdir(parents=True, exist_ok=True)
-    out_filename = output_folder / "ok_uids.npy"
+    out_filename = output_folder / "good_uids.npy"
     processed_uids = np.array([(int(uid[:16], 16), int(uid[16:32], 16)) for uid in uids], np.dtype("u8,u8"))
     processed_uids.sort()
     np.save(out_filename, processed_uids)    

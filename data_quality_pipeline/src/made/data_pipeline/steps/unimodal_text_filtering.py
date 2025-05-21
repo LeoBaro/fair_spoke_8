@@ -193,7 +193,7 @@ def unimodal_text_filtering(
         MetricsStore().save_to_file(log_folder)
 
     if config.infrastructure.save_filtered_uids:
-        filtered_uids_path = log_folder / "unimodal_text_filtering__filtered_uids_by_step.json"
+        filtered_uids_path = log_folder / "bad_uids_unimodal_text_filtering.json"
         with open(filtered_uids_path, 'w', encoding="utf-8") as f:
             json.dump(filtered_uids_by_filter, f, indent=2)
         logger.info("Filtered UIDs saved to %s", filtered_uids_path)

@@ -27,7 +27,7 @@ class MultimodalFilter(FilteringBlock):
         device = "cuda" if torch.cuda.is_available() else "cpu"
         if device == "cpu":
             raise ValueError("Multimodal filtering is not supported on CPU")
-        os.environ["TOKENIZERS_PARALLELISM="] = "false"
+        os.environ["TOKENIZERS_PARALLELISM"] = "false"
         self.model = CLIPModel.from_pretrained(self.config.multimodal.dfn_model).to(device)
         self.processor = CLIPProcessor.from_pretrained(self.config.multimodal.dfn_model) #  use_fast=True
 
@@ -126,7 +126,7 @@ def multimodal_filtering(
         MetricsStore().save_to_file(log_folder)
 
     if config.infrastructure.save_filtered_uids:
-        filtered_uids_path = log_folder / "multimodal_filtering__filtered_uids_by_step.json"
+        filtered_uids_path = log_folder / "bad_uids_multimodal_filtering.json"
         with open(filtered_uids_path, 'w', encoding="utf-8") as f:
             json.dump(filtered_uids_by_filter, f, indent=2)
         logger.info("Filtered UIDs saved to %s", filtered_uids_path)
@@ -148,17 +148,22 @@ def _get_dfn_score_filter_mask(
     similarity_scores = []
     
     for img, txt in zip(images, captions):
-        inputs = clip_processor(
-            text=[txt],
-            images=[img],
-            return_tensors="pt",
-            padding=True,
-            truncation=True,
-            max_length=clip_caption_max_length
-        ).to(device)
-        outputs = dfn_model(**inputs)
-        score = outputs.logits_per_image.item()
-        similarity_scores.append(score)
+        try:
+            inputs = clip_processor(
+                text=[txt],
+                images=[img],
+                return_tensors="pt",
+                padding=True,
+                truncation=True,
+                max_length=clip_caption_max_length
+            ).to(device)
+            outputs = dfn_model(**inputs)
+            score = outputs.logits_per_image.item()
+            similarity_scores.append(score)
+        except Exception as e:
+            print(f"Error clip_processor: {e}")
+            similarity_scores.append(0)
+            continue
     
     return _filter_by_percentile(similarity_scores, dfn_percentile_to_drop)
 
