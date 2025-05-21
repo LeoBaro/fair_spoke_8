@@ -10,12 +10,12 @@ from PIL import Image
 from itertools import chain
 from datetime import datetime
 from collections import defaultdict
-
+from time import time
 from transformers import CLIPProcessor, CLIPModel
 
 from made.config import Config
 from made.data_pipeline.metrics.metrics_store import MetricsStore
-from made.data_pipeline.steps.base import apply_filtering_step, FilteringBlock
+from made.data_pipeline.steps.base import apply_filter_mask, execute_filter, FilteringBlock
 from made.data_pipeline.data.datacomp_handler import decode_webdataset, get_next_batch
 
 @ray.remote(num_gpus=0.1)
@@ -53,6 +53,9 @@ def multimodal_filtering(
     ):
     logger = logging.getLogger("ray")
     
+
+    _validate_configuration(config)
+
     # logger.info("Decoding webdataset")
     dataset = decode_webdataset(
         tar_files,
@@ -63,7 +66,7 @@ def multimodal_filtering(
     )   
     
     # logger.info("Iterating over dataset")
-    ok_uids = []
+    all_good_uids = []
     filtered_uids_by_filter = defaultdict(list)
 
     sample_count = 0
@@ -81,32 +84,41 @@ def multimodal_filtering(
 
         # ------------------------------------------------------------------------ 
         # first step: filter by aspect ratio
-        batch_ok_uids, batch_ok_samples, batch_uids_filtered, batch_samples_filtered = apply_filtering_step(
-            filter_name=_get_clip_score_filter_mask,
-            batch_id=batch_id,
-            uids=batch[0],
-            samples=batch,
-            apply_filters=config.infrastructure.apply_filters,
-            parameters = {
-                "dfn_model": dfn_model,
-                "clip_processor": clip_processor,
-                "dfn_percentile_to_drop": config.multimodal.dfn_percentile_to_drop,
-                "clip_caption_max_length": config.multimodal.clip_caption_max_length
-            }
+        filter_fn_parameters = {
+            "dfn_model": dfn_model,
+            "clip_processor": clip_processor,
+            "dfn_percentile_to_drop": config.multimodal.dfn_percentile_to_drop,
+            "clip_caption_max_length": config.multimodal.clip_caption_max_length
+        }
+        filter_mask, elapsed_time = execute_filter(
+            filter_name=_get_dfn_score_filter_mask,
+            captions=batch[2],
+            images=batch[1],
+            parameters = filter_fn_parameters
+        )
+
+        if config.infrastructure.enable_metrics:
+            MetricsStore().add_filter_metric(
+                "_get_dfn_score_filter_mask",
+                batch_id,
+                len(batch[0]),
+                int(sum(filter_mask)),
+                elapsed_time,
+                filter_fn_parameters,
+                ["dfn_percentile_to_drop", "clip_caption_max_length"]
+            )
+
+        good_uids, bad_uids = apply_filter_mask(
+            batch[0], filter_mask
         )
         if config.infrastructure.save_filtered_uids:
-            filtered_uids_by_filter["text_detection"].extend(batch_uids_filtered)
+            filtered_uids_by_filter["dfn"].extend(bad_uids)
 
-        # ------------------------------------------- 
-        # third step: image specificity filtering
-        # TODO: implement this
-
-
-        ok_uids.append(batch_ok_uids)
+        all_good_uids.append(good_uids)
 
 
     # logger.info("Concatenating uids")
-    ok_uids = list(chain.from_iterable(ok_uids))
+    all_good_uids = list(chain.from_iterable(all_good_uids))
 
     logger.info(f"[{datetime.now()}] Total samples processed: %s", sample_count)
 
@@ -119,10 +131,11 @@ def multimodal_filtering(
             json.dump(filtered_uids_by_filter, f, indent=2)
         logger.info("Filtered UIDs saved to %s", filtered_uids_path)
 
-    return ok_uids
+    return all_good_uids
 
-def _get_clip_score_filter_mask(
-        batch: list[Image.Image],
+def _get_dfn_score_filter_mask(
+        captions: list[str],
+        images: list[Image.Image],
         dfn_model,
         clip_processor,
         dfn_percentile_to_drop: int,
@@ -133,10 +146,8 @@ def _get_clip_score_filter_mask(
     """
     device = "cuda" if torch.cuda.is_available() else "cpu"
     similarity_scores = []
-    image_list = batch[1]
-    text_list = batch[2]
     
-    for img, txt in zip(image_list, text_list):
+    for img, txt in zip(images, captions):
         inputs = clip_processor(
             text=[txt],
             images=[img],
@@ -170,5 +181,5 @@ def _filter_by_percentile(scores, percentile):
     return mask
 
 def _validate_configuration(config: Config):
-    if config.multimodal.dfn_percentile_to_drop < 0.0 or config.multimodal.dfn_percentile_to_drop > 1.0:
-        raise ValueError("The aspect ratio threshold must be between 0.0 and 1.0")
+    if config.multimodal.dfn_percentile_to_drop < 0 or config.multimodal.dfn_percentile_to_drop > 100:
+        raise ValueError("The DFN percentile threshold must be between 0 and 100")
