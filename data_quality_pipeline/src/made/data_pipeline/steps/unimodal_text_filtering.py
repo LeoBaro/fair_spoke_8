@@ -4,14 +4,15 @@ import logging
 import fasttext
 import spacy
 import json 
-from itertools import chain
+from itertools import chain, compress
 from collections import defaultdict
 from datetime import datetime
-
+import torch
+import numpy as np
 from made.config import Config
 from made.paths import MADE_PATH
 from made.data_pipeline.metrics.metrics_store import MetricsStore
-from made.data_pipeline.steps.base import apply_filtering_step, FilteringBlock
+from made.data_pipeline.steps.base import execute_filter, FilteringBlock
 from made.data_pipeline.data.datacomp_handler import decode_webdataset, get_next_batch
 
 @ray.remote(num_gpus=0.1)
@@ -20,6 +21,9 @@ class UnimodalTextFilter(FilteringBlock):
     def __init__(self, config_path: Path):
         super().__init__()
         self.config = Config(config_path)
+        device = "cuda" if torch.cuda.is_available() else "cpu"
+        if device == "cpu":
+            raise ValueError("UnimodalTextFilter filtering is not supported on CPU")
         self.language_detection_model = fasttext.load_model(
             str(MADE_PATH / self.config.unimodal.lang_detection_model_path)
             )
@@ -68,7 +72,7 @@ def unimodal_text_filtering(
     )   
 
     # logger.info("Iterating over dataset")
-    all_uids = []
+    all_good_uids = []
     filtered_uids_by_filter = defaultdict(list)
 
     sample_count = 0
@@ -87,70 +91,114 @@ def unimodal_text_filtering(
 
         # ------------------------------------------- 
         # first step: filter by caption length
-        batch_ok_uids, batch_ok_samples, batch_uids_filtered, batch_samples_filtered = apply_filtering_step(
+        good_uids = batch[0]
+        good_captions = batch[1]
+
+        filter_fn_parameters = {
+            "min_words": config.unimodal.caption_min_words,
+            "min_chars": config.unimodal.caption_min_chars
+        }
+        length_filter_mask, elapsed_time = execute_filter(
             filter_name=_get_filter_captions_by_length_mask,
-            batch_id=batch_id,
-            uids=batch[0],
-            samples=batch[1],
-            apply_filters= config.infrastructure.apply_filters,
-            parameters = {
-                "min_words": config.unimodal.caption_min_words,
-                "min_chars": config.unimodal.caption_min_chars
-            }
+            captions=batch[1],
+            images=None,
+            parameters = filter_fn_parameters
         )
+        if config.infrastructure.enable_metrics:
+            MetricsStore().add_filter_metric(
+                "_get_filter_captions_by_length_mask",
+                batch_id,
+                len(good_captions),
+                int(sum(length_filter_mask)),
+                elapsed_time,
+                filter_fn_parameters,
+                ["min_words", "min_chars"]
+            )
         if config.infrastructure.save_filtered_uids:
-            filtered_uids_by_filter["length"].extend(batch_uids_filtered)
+            bad_uids = list(compress(good_uids, [not m for m in length_filter_mask]))
+            filtered_uids_by_filter["length"].extend(bad_uids)
+
+        good_uids = list(compress(good_uids, [m for m in length_filter_mask]))
+        good_captions = list(compress(good_captions, [m for m in length_filter_mask]))
 
         # ------------------------------------------- 
         # second step: filter by language
-        batch_ok_uids, batch_ok_samples, batch_uids_filtered, batch_samples_filtered = apply_filtering_step(
-            filter_name=_get_filter_captions_by_language_mask,
-            batch_id=batch_id,
-            uids=batch_ok_uids,
-            samples=batch_ok_samples,
-            apply_filters=config.infrastructure.apply_filters,
-            parameters = {
+        filter_fn_parameters = {
                 "model": language_detection_model,
                 "target_language": config.unimodal.lang_detection_language,
                 "threshold": config.unimodal.lang_detection_score_threshold
-            }
+        }
+        lang_filter_mask, elapsed_time = execute_filter(
+            filter_name=_get_filter_captions_by_language_mask,
+            captions=good_captions,
+            images=None,
+            parameters = filter_fn_parameters
         )
+        if config.infrastructure.enable_metrics:
+            MetricsStore().add_filter_metric(
+                "_get_filter_captions_by_language_mask",
+                batch_id,
+                len(good_captions),
+                int(sum(lang_filter_mask)),
+                elapsed_time,
+                filter_fn_parameters,
+                ["model", "target_language", "threshold"]
+            )
         if config.infrastructure.save_filtered_uids:
-            filtered_uids_by_filter["language"].extend(batch_uids_filtered)
+            bad_uids = list(compress(good_uids, [not m for m in lang_filter_mask]))
+            filtered_uids_by_filter["language"].extend(bad_uids)
 
+        good_uids = list(compress(good_uids, [m for m in lang_filter_mask]))
+        good_captions = list(compress(good_captions, [m for m in lang_filter_mask]))
 
         # ------------------------------------------- 
         # third step: pos tags filtering
-        batch_ok_uids, batch_ok_samples, batch_uids_filtered, batch_samples_filtered = apply_filtering_step(
-            filter_name = _get_filter_captions_by_pos_tags_mask,
-            batch_id=batch_id,
-            uids=batch_ok_uids,
-            samples=batch_ok_samples,
-            apply_filters= config.infrastructure.apply_filters,
-            parameters = {
-                "model": pos_tagging_model,
-                "target_pos_tags": pos_distribution
-            }
+        filter_fn_parameters = {
+            "model": pos_tagging_model,
+            "target_pos_tags": pos_distribution
+        }
+        pos_filter_mask, elapsed_time = execute_filter(
+            filter_name=_get_filter_captions_by_pos_tags_mask,
+            captions=good_captions,
+            images=None,
+            parameters = filter_fn_parameters
         )
+        if config.infrastructure.enable_metrics:
+            MetricsStore().add_filter_metric(
+                "_get_filter_captions_by_pos_tags_mask",
+                batch_id,
+                len(good_captions),
+                int(sum(pos_filter_mask)),
+                elapsed_time,
+                filter_fn_parameters,
+                ["model", "target_pos_tags"]
+            )
         if config.infrastructure.save_filtered_uids:
-            filtered_uids_by_filter["pos_tags"].extend(batch_uids_filtered)
+            bad_uids = list(compress(good_uids, [not m for m in pos_filter_mask]))
+            filtered_uids_by_filter["pos_tags"].extend(bad_uids)
 
-        all_uids.append(batch_ok_uids)
+        good_uids = list(compress(good_uids, [m for m in pos_filter_mask]))
+
+
+        all_good_uids.append(good_uids)
+
+
 
     # logger.info("Concatenating uids")
-    all_uids = list(chain.from_iterable(all_uids))
+    all_good_uids = list(chain.from_iterable(all_good_uids))
+
     logger.info(f"[{datetime.now()}] Total samples processed: %s", sample_count)
 
     if config.infrastructure.enable_metrics:
         MetricsStore().save_to_file(log_folder)
 
     if config.infrastructure.save_filtered_uids:
-        filtered_uids_path = log_folder / "unimodal_text_filtering__filtered_uids_by_step.json"
+        filtered_uids_path = log_folder / "bad_uids_unimodal_text_filtering.json"
         with open(filtered_uids_path, 'w', encoding="utf-8") as f:
             json.dump(filtered_uids_by_filter, f, indent=2)
-        logger.info(f"Filtered UIDs saved to {filtered_uids_path}")
+        logger.info("Filtered UIDs saved to %s", filtered_uids_path)
 
-    return all_uids
+    return all_good_uids
 
 # TODO: implement a function than clean the captions and 
 # remove extra whitespace and newlines

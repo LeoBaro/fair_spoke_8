@@ -39,7 +39,7 @@ def main(args):
     made_pipeline = make_pipeline(args.config_path)
 
     s = time()
-    ok_uids = made_pipeline.execute(
+    good_uids = made_pipeline.execute(
         collect_tar_files(args.shards_path), 
         args.log_folder
     )
@@ -48,7 +48,7 @@ def main(args):
 
 
     logger.info("Saving uids")
-    save_uids(ok_uids, args.output_folder)
+    save_uids(good_uids, args.output_folder)
 
     cleanup()
 
