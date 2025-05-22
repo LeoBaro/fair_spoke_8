@@ -7,7 +7,7 @@ import torch
 import numpy as np
 from numpy.typing import NDArray
 from PIL import Image
-from itertools import chain
+from itertools import chain, compress
 from datetime import datetime
 from collections import defaultdict
 from time import time
@@ -15,7 +15,7 @@ from transformers import CLIPProcessor, CLIPModel
 
 from made.config import Config
 from made.data_pipeline.metrics.metrics_store import MetricsStore
-from made.data_pipeline.steps.base import apply_filter_mask, execute_filter, FilteringBlock
+from made.data_pipeline.steps.base import execute_filter, FilteringBlock
 from made.data_pipeline.data.datacomp_handler import decode_webdataset, get_next_batch
 
 @ray.remote(num_gpus=0.1)
@@ -83,17 +83,20 @@ def multimodal_filtering(
         # logger.info(f"Next batch {batch_id} / {sample_count}")
 
         # ------------------------------------------------------------------------ 
-        # first step: filter by aspect ratio
+        # first step: filter by dnf
+        good_uids = batch[0]
+        good_images = batch[1]
+        good_captions = batch[2]
         filter_fn_parameters = {
             "dfn_model": dfn_model,
             "clip_processor": clip_processor,
             "dfn_percentile_to_drop": config.multimodal.dfn_percentile_to_drop,
             "clip_caption_max_length": config.multimodal.clip_caption_max_length
         }
-        filter_mask, elapsed_time = execute_filter(
+        dfn_filter_mask, elapsed_time = execute_filter(
             filter_name=_get_dfn_score_filter_mask,
-            captions=batch[2],
-            images=batch[1],
+            captions=good_captions,
+            images=good_images,
             parameters = filter_fn_parameters
         )
 
@@ -102,17 +105,19 @@ def multimodal_filtering(
                 "_get_dfn_score_filter_mask",
                 batch_id,
                 len(batch[0]),
-                int(sum(filter_mask)),
+                int(sum(dfn_filter_mask)),
                 elapsed_time,
                 filter_fn_parameters,
                 ["dfn_percentile_to_drop", "clip_caption_max_length"]
             )
-
-        good_uids, bad_uids = apply_filter_mask(
-            batch[0], filter_mask
-        )
         if config.infrastructure.save_filtered_uids:
+            bad_uids = list(compress(good_uids, [not m for m in dfn_filter_mask]))
             filtered_uids_by_filter["dfn"].extend(bad_uids)
+
+        good_uids = list(compress(good_uids, [m for m in dfn_filter_mask]))
+        good_images = list(compress(good_images, [m for m in dfn_filter_mask]))
+        good_captions = list(compress(good_captions, [m for m in dfn_filter_mask]))
+
 
         all_good_uids.append(good_uids)
 
