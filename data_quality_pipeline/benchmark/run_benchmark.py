@@ -6,6 +6,7 @@ import traceback
 
 from made.config import Config
 from made.bin.cli import cli
+from made.bin.made import make_pipeline
 from made.data_pipeline.utils import connect_or_start_ray, collect_tar_files, save_uids, cleanup
 from made.data_pipeline.pipeline import ActorGroupPipeline
 from utils import create_config, create_output_folder, create_results_and_log_folders, create_result_file
@@ -44,8 +45,11 @@ def run_pipeline(filtering_step_name: str, num_workers: int, batch_size: int, sh
     logger = logging.getLogger("ray")
     logger.info("Starting pipeline")
     logger.info("Num workers: %s", config.infrastructure.num_workers)
-    
-    made_pipeline = make_single_step_pipeline(config_path, filtering_step_name, num_workers)
+
+    if filtering_step_name == "MadePipeline":
+        made_pipeline = make_pipeline(config_path)
+    else:
+        made_pipeline = make_single_step_pipeline(config_path, filtering_step_name, num_workers)
 
     s = time()
     ok_uids = made_pipeline.execute(
@@ -72,7 +76,7 @@ def cli():
         "--filtering_step_name", 
         type=str, 
         required=True,
-        choices=["UnimodalVisionFilter", "UnimodalTextFilter"]
+        choices=["UnimodalVisionFilter", "UnimodalTextFilter", "MultimodalFilter", "MadePipeline"]
     )
     return parser.parse_args()
 
@@ -86,7 +90,7 @@ def main(args):
     # shards_path = "/home/leobaro/Downloads/datasets/web/datacomp/_completed_downloads"
     # shards_path = "/home/leobaro/workspace/labs/fair_spoke_8/data_quality_pipeline/test"
     shards_path = "/home/leobaro/workspace/labs/fair_spoke_8/data_quality_pipeline/benchmark/data"
-    output_folder = create_output_folder()
+    output_folder = create_output_folder(args.filtering_step_name)
     result_file = create_result_file(output_folder)
 
     cleanup()

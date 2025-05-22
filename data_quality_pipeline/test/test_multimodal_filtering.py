@@ -14,11 +14,11 @@ from made.data_pipeline.metrics.metrics_store import MetricsStore
 def test_multimodal_filtering(tar_files, log_folder, config):
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    model = CLIPModel.from_pretrained(config.multimodal.clip_model).to(device)
-    processor = CLIPProcessor.from_pretrained(config.multimodal.clip_model)
+    model = CLIPModel.from_pretrained(config.multimodal.dfn_model).to(device)
+    processor = CLIPProcessor.from_pretrained(config.multimodal.dfn_model)
 
     results = multimodal_filtering(model, processor, tar_files, log_folder, config)
-    assert len(results) == 10
+    assert len(results) == 750
 
 
 def test_ray_multimodal_filtering(ray_init, ray_flag, tar_files, log_folder, config_path):
@@ -33,4 +33,4 @@ def test_ray_multimodal_filtering(ray_init, ray_flag, tar_files, log_folder, con
         ]
     )
 
-    assert len(results[0]) == 10
+    assert len(results[0]) == 750

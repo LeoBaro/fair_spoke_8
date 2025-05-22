@@ -47,7 +47,7 @@ def test_actor_group_pipeline(tar_files, config_path, log_folder):
 
     actor_group_pipeline.add_actor_group(0, "UnimodalVisionFilter", 1, config_path)
     uids = actor_group_pipeline.execute(tar_files, log_folder)
-    assert len(uids) == 30
+    assert len(uids) == 25
 
 
     actor_group_pipeline.add_pipeline_step("union")

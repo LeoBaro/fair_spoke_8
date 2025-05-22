@@ -34,8 +34,8 @@ unimodal:
 
 multimodal:
     batch_size: 32
-    clip_model: openai/clip-vit-base-patch32
-    clip_score_threshold: 0.3
+    dfn_model: openai/clip-vit-base-patch32
+    dfn_percentile_to_drop: 0.3
 """
     
     config_file_path = "/tmp/single_node_config.yaml"
