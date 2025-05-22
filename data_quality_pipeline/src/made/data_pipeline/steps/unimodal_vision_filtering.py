@@ -12,7 +12,7 @@ from collections import defaultdict
 
 from made.config import Config
 from made.data_pipeline.metrics.metrics_store import MetricsStore
-from made.data_pipeline.steps.base import execute_filter, apply_filter_mask
+from made.data_pipeline.steps.base import execute_filter
 from made.data_pipeline.data.datacomp_handler import decode_webdataset, get_next_batch
 
 @ray.remote(num_gpus=0.1)

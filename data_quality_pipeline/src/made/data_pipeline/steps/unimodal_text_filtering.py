@@ -12,7 +12,7 @@ import numpy as np
 from made.config import Config
 from made.paths import MADE_PATH
 from made.data_pipeline.metrics.metrics_store import MetricsStore
-from made.data_pipeline.steps.base import execute_filter, apply_filter_mask, FilteringBlock
+from made.data_pipeline.steps.base import execute_filter, FilteringBlock
 from made.data_pipeline.data.datacomp_handler import decode_webdataset, get_next_batch
 
 @ray.remote(num_gpus=0.1)
