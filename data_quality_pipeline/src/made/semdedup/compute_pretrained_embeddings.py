@@ -9,7 +9,13 @@ from tqdm import tqdm
 from torch.nn.functional import normalize
 
 
-def get_embeddings(model, dataloader, emd_memmap, paths_memmap):
+def get_embeddings(
+        model,
+        images,
+        batch_indices,
+        emd_memmap,
+        paths_memmap,
+        batch_uids):
     """
     function to compute and store representations for the data from pretrained model. It is preferable to parallelize this function on mulitiple devices (GPUs). Each device will process part of the data.
     model: pretrained model
@@ -22,7 +28,7 @@ def get_embeddings(model, dataloader, emd_memmap, paths_memmap):
     """
 
     # -- Device
-    device = "cuda" if torch.cuda.is_available() else "cpu"
+    device = "cuda" if torch.cuda   .is_available() else "cpu"
     print(device)
     # -- model
     model = model.to(device)
@@ -31,8 +37,8 @@ def get_embeddings(model, dataloader, emd_memmap, paths_memmap):
     # -- Get and store 1) encodings 2)path to each example
     print("Get encoding...")
     with torch.no_grad():
-        for data_batch, paths_batch, batch_indices in tqdm(dataloader):
-            encodings = model.get_image_features(pixel_values=data_batch)
-            embeds_normalized = normalize(encodings, dim=1)
-            emd_memmap[batch_indices] = embeds_normalized.cpu().detach().numpy()
-            paths_memmap[batch_indices] = paths_batch
+        # for data_batch, paths_batch, batch_indices in tqdm(dataloader):
+        encodings = model.get_image_features(pixel_values=images)
+        embeds_normalized = normalize(encodings, dim=1)
+        emd_memmap[batch_indices] = embeds_normalized.cpu().detach().numpy()
+        paths_memmap[batch_indices] = batch_uids

@@ -18,12 +18,11 @@ import os
 from typing import List
 import random
 import numpy as np
-import submitit
 import pprint
 from tqdm import tqdm
 import argparse
 from typing import List, Tuple, Union
-from clustering.utils import get_logger
+from made.semdedup.clustering.utils import get_logger
 
 
 def assign_and_sort_clusters(
@@ -186,174 +185,174 @@ def rank_within_cluster(
     return sorted_clusters_list
 
 
-class SLURMJob(submitit.helpers.Checkpointable):
-    """
-    - Each SLURMJob will calculate and save the encodings for a list of shards.
-    - Parallelize shards across jobs so that preemption in the middle of an epoch isn't a problem and because we want to
-    keep the shard structure anyway.
-    - Process more than one shard per job because each shard takes about a minute so we want to amortize overhead.
-    - Preempted jobs get resubmitted. Already computed shards get skipped internally.
+# class SLURMJob(submitit.helpers.Checkpointable):
+#     """
+#     - Each SLURMJob will calculate and save the encodings for a list of shards.
+#     - Parallelize shards across jobs so that preemption in the middle of an epoch isn't a problem and because we want to
+#     keep the shard structure anyway.
+#     - Process more than one shard per job because each shard takes about a minute so we want to amortize overhead.
+#     - Preempted jobs get resubmitted. Already computed shards get skipped internally.
 
-    """
+#     """
 
-    def __init__(self, args, cluster_ids: List[str]):
-        self.args = args
-        self.cluster_ids = cluster_ids
-        assert args.ncentroids == len(self.cluster_ids)
+#     def __init__(self, args, cluster_ids: List[str]):
+#         self.args = args
+#         self.cluster_ids = cluster_ids
+#         assert args.ncentroids == len(self.cluster_ids)
 
-    def seed_everything(self, seed=42):
-        random.seed(seed)
-        os.environ["PYTHONHASHSEED"] = str(seed)
-        np.random.seed(seed)
-        torch.manual_seed(seed)
-        torch.cuda.manual_seed(seed)
+#     def seed_everything(self, seed=42):
+#         random.seed(seed)
+#         os.environ["PYTHONHASHSEED"] = str(seed)
+#         np.random.seed(seed)
+#         torch.manual_seed(seed)
+#         torch.cuda.manual_seed(seed)
 
-    def _encode_shard(self, args):
-        # Configure logger
-        logger = get_logger(
-            file_name=f"{args.save_folder}/clustering-logs.log",
-            level=logging.INFO,
-            stdout=True,
-        )
-        args.logger = logger
+#     def _encode_shard(self, args):
+#         # Configure logger
+#         logger = get_logger(
+#             file_name=f"{args.save_folder}/clustering-logs.log",
+#             level=logging.INFO,
+#             stdout=True,
+#         )
+#         args.logger = logger
 
-        data = np.memmap(
-            args.emb_memory_loc,
-            dtype="float32",
-            mode="r",
-            shape=(args.dataset_size, args.emb_size),
-        )
-        paths_list = np.memmap(
-            args.paths_memory_loc,
-            dtype=args.path_str_dtype,
-            mode="r",
-            shape=(args.dataset_size,),
-        )
+#         data = np.memmap(
+#             args.emb_memory_loc,
+#             dtype="float32",
+#             mode="r",
+#             shape=(args.dataset_size, args.emb_size),
+#         )
+#         paths_list = np.memmap(
+#             args.paths_memory_loc,
+#             dtype=args.path_str_dtype,
+#             mode="r",
+#             shape=(args.dataset_size,),
+#         )
 
-        assign_and_sort_clusters(
-            data,
-            paths_list,
-            args.sim_metric,
-            args.keep_hard,
-            args.Kmeans_with_cos_dist,
-            args.save_folder,
-            args.sorted_clusters_file_loc,
-            args.cluster_ids_for_job,
-            args.logger,
-        )
+#         assign_and_sort_clusters(
+#             data,
+#             paths_list,
+#             args.sim_metric,
+#             args.keep_hard,
+#             args.Kmeans_with_cos_dist,
+#             args.save_folder,
+#             args.sorted_clusters_file_loc,
+#             args.cluster_ids_for_job,
+#             args.logger,
+#         )
 
-        return
+#         return
 
-    def __call__(self):
-        self.seed_everything(self.args.seed)
+#     def __call__(self):
+#         self.seed_everything(self.args.seed)
 
-        num_clusters = len(self.cluster_ids)
-        print(
-            f"There are {num_clusters} clusters: {self.cluster_ids[0]} to  {self.cluster_ids[-1]}"
-        )
+#         num_clusters = len(self.cluster_ids)
+#         print(
+#             f"There are {num_clusters} clusters: {self.cluster_ids[0]} to  {self.cluster_ids[-1]}"
+#         )
 
-        job_env = submitit.JobEnvironment()
+#         job_env = submitit.JobEnvironment()
 
-        print(f"There are {args.num_tasks} tasks in this job")
-        print(f"This is the task #{job_env.local_rank}")
+#         print(f"There are {args.num_tasks} tasks in this job")
+#         print(f"This is the task #{job_env.local_rank}")
 
-        ## devide clusters across jobs (cpus)
-        num_clusters_per_job = int(math.ceil(num_clusters / args.num_tasks))
-        task_rank = job_env.local_rank
-        start = task_rank * num_clusters_per_job
-        end = (task_rank + 1) * num_clusters_per_job
-        end = min(end, num_clusters)
+#         ## devide clusters across jobs (cpus)
+#         num_clusters_per_job = int(math.ceil(num_clusters / args.num_tasks))
+#         task_rank = job_env.local_rank
+#         start = task_rank * num_clusters_per_job
+#         end = (task_rank + 1) * num_clusters_per_job
+#         end = min(end, num_clusters)
 
-        cluster_ids_for_job = self.cluster_ids[start:end]
-        print(
-            f"This job/task will process {len(cluster_ids_for_job)} clusters: cluster {cluster_ids_for_job[0]} to cluster {cluster_ids_for_job[-1]}"
-        )
+#         cluster_ids_for_job = self.cluster_ids[start:end]
+#         print(
+#             f"This job/task will process {len(cluster_ids_for_job)} clusters: cluster {cluster_ids_for_job[0]} to cluster {cluster_ids_for_job[-1]}"
+#         )
 
-        self.args.cluster_ids_for_job = cluster_ids_for_job
+#         self.args.cluster_ids_for_job = cluster_ids_for_job
 
-        self._encode_shard(self.args)
-
-
-def launch_jobs(args):
-    """
-    Runs the clustering job using the specified configuration file and SLURM parameters.
-
-    """
-    confg_file = args.config_file
-    ## -- load kmeans clustering parameters from configs file
-    with open(confg_file, "r") as y_file:
-        params = yaml.load(y_file, Loader=yaml.FullLoader)
-    with open(pathlib.Path(params["save_folder"], "clustering_params.txt"), "w") as f:
-        pprint.pprint(params, f)
-
-    args.save_folder = params["save_folder"]
-    args.emb_memory_loc = params["emb_memory_loc"]
-    args.paths_memory_loc = params["paths_memory_loc"]
-    args.dataset_size = params["dataset_size"]
-    args.emb_size = params["emb_size"]
-    args.path_str_dtype = params["path_str_dtype"]  # "S24" for LAION
-    args.ncentroids = params["ncentroids"]
-    args.seed = params["seed"]
-    args.sim_metric = params["sim_metric"]
-    args.keep_hard = params["keep_hard"]
-    args.Kmeans_with_cos_dist = params["Kmeans_with_cos_dist"]
-    args.save_folder = params["save_folder"]
-    args.sorted_clusters_file_loc = params["sorted_clusters_file_loc"]
-    args.cluster_ids_for_job = list(range(args.ncentroids))
-
-    ## -- SLURM CONFIG
-    PARTITION = args.partition
-    SLURM_ARRAY_PARALLELISM = 1000
-    NODES = 1
-    TIMEOUT = args.timeout
-    CPUS_PER_TASKS = args.cpus_per_task
-    TASKS_PER_NODE = args.num_tasks
-
-    ## -- SUBMIT
-    submitit_path = f"{args.save_folder}/clustering-jobs/%j"
-    executor = submitit.AutoExecutor(folder=submitit_path, slurm_max_num_timeout=30)
-    executor.update_parameters(
-        slurm_partition=PARTITION,
-        slurm_array_parallelism=SLURM_ARRAY_PARALLELISM,
-        nodes=NODES,
-        tasks_per_node=TASKS_PER_NODE,
-        cpus_per_task=CPUS_PER_TASKS,
-        timeout_min=TIMEOUT,
-    )
-
-    jobs = []
-
-    ## -- Start a job with <args.num_tasks> task. Each task will process part of the clusters
-    with executor.batch():
-        exp = SLURMJob(args, list(range(0, args.ncentroids)))
-        job = executor.submit(exp)
-        jobs.append(job)
-
-    for job in jobs:
-        print("Submitted job_id:", job.job_id)
+#         self._encode_shard(self.args)
 
 
-if __name__ == "__main__":
+# def launch_jobs(args):
+#     """
+#     Runs the clustering job using the specified configuration file and SLURM parameters.
 
-    parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "--config-file",
-        type=str,
-        default="configs/openclip/paralellized_kmeans_dino_embs_configs.yaml",
-    )
-    # -- slurm parameters
-    parser.add_argument(
-        "--partition", type=str, default="scaling_data_pruning", help="partition"
-    )
-    parser.add_argument("--num-tasks", type=int, default=10, help="number of tasks")
-    parser.add_argument(
-        "--cpus-per-task", type=int, default=5, help="number of cpus per task"
-    )
-    parser.add_argument(
-        "--timeout", type=int, default=500, help="job timeout in minutes"
-    )
+#     """
+#     confg_file = args.config_file
+#     ## -- load kmeans clustering parameters from configs file
+#     with open(confg_file, "r") as y_file:
+#         params = yaml.load(y_file, Loader=yaml.FullLoader)
+#     with open(pathlib.Path(params["save_folder"], "clustering_params.txt"), "w") as f:
+#         pprint.pprint(params, f)
 
-    args = parser.parse_args()
+#     args.save_folder = params["save_folder"]
+#     args.emb_memory_loc = params["emb_memory_loc"]
+#     args.paths_memory_loc = params["paths_memory_loc"]
+#     args.dataset_size = params["dataset_size"]
+#     args.emb_size = params["emb_size"]
+#     args.path_str_dtype = params["path_str_dtype"]  # "S24" for LAION
+#     args.ncentroids = params["ncentroids"]
+#     args.seed = params["seed"]
+#     args.sim_metric = params["sim_metric"]
+#     args.keep_hard = params["keep_hard"]
+#     args.Kmeans_with_cos_dist = params["Kmeans_with_cos_dist"]
+#     args.save_folder = params["save_folder"]
+#     args.sorted_clusters_file_loc = params["sorted_clusters_file_loc"]
+#     args.cluster_ids_for_job = list(range(args.ncentroids))
 
-    # Submit the job
-    launch_jobs(args)
+#     ## -- SLURM CONFIG
+#     PARTITION = args.partition
+#     SLURM_ARRAY_PARALLELISM = 1000
+#     NODES = 1
+#     TIMEOUT = args.timeout
+#     CPUS_PER_TASKS = args.cpus_per_task
+#     TASKS_PER_NODE = args.num_tasks
+
+#     ## -- SUBMIT
+#     submitit_path = f"{args.save_folder}/clustering-jobs/%j"
+#     executor = submitit.AutoExecutor(folder=submitit_path, slurm_max_num_timeout=30)
+#     executor.update_parameters(
+#         slurm_partition=PARTITION,
+#         slurm_array_parallelism=SLURM_ARRAY_PARALLELISM,
+#         nodes=NODES,
+#         tasks_per_node=TASKS_PER_NODE,
+#         cpus_per_task=CPUS_PER_TASKS,
+#         timeout_min=TIMEOUT,
+#     )
+
+#     jobs = []
+
+#     ## -- Start a job with <args.num_tasks> task. Each task will process part of the clusters
+#     with executor.batch():
+#         exp = SLURMJob(args, list(range(0, args.ncentroids)))
+#         job = executor.submit(exp)
+#         jobs.append(job)
+
+#     for job in jobs:
+#         print("Submitted job_id:", job.job_id)
+
+
+# if __name__ == "__main__":
+
+#     parser = argparse.ArgumentParser()
+#     parser.add_argument(
+#         "--config-file",
+#         type=str,
+#         default="configs/openclip/paralellized_kmeans_dino_embs_configs.yaml",
+#     )
+#     # -- slurm parameters
+#     parser.add_argument(
+#         "--partition", type=str, default="scaling_data_pruning", help="partition"
+#     )
+#     parser.add_argument("--num-tasks", type=int, default=10, help="number of tasks")
+#     parser.add_argument(
+#         "--cpus-per-task", type=int, default=5, help="number of cpus per task"
+#     )
+#     parser.add_argument(
+#         "--timeout", type=int, default=500, help="job timeout in minutes"
+#     )
+
+#     args = parser.parse_args()
+
+#     # Submit the job
+#     launch_jobs(args)

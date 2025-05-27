@@ -15,10 +15,9 @@ import pickle
 import argparse
 import yaml
 import pprint
-import submitit
 import pathlib
 from typing import Union, Optional
-from clustering.utils import get_logger
+from made.semdedup.clustering.utils import get_logger
 
 
 def faiss_index_to_gpu(cpu_index):
@@ -201,55 +200,55 @@ def main(args):
     )
 
 
-if __name__ == "__main__":
-    # Configure command line arguments
-    parser = argparse.ArgumentParser()
+# if __name__ == "__main__":
+#     # Configure command line arguments
+#     parser = argparse.ArgumentParser()
 
-    parser.add_argument(
-        "--confg-file",
-        type=str,
-        default="configs/openclip/paralellized_kmeans_dino_embs_configs.yaml",
-        help=".yaml config file path",
-    )
-    # -- slurm parameters
-    parser.add_argument(
-        "--partition", type=str, default="scaling_data_pruning", help="partition"
-    )
-    parser.add_argument("--ngpus", type=int, default=1, help="number of gpus")
-    parser.add_argument("--cpus-per-task", type=int, default=10, help="number of cpus")
-    parser.add_argument(
-        "--timeout", type=int, default=1500, help="job timeout in minutes"
-    )
+#     parser.add_argument(
+#         "--confg-file",
+#         type=str,
+#         default="configs/openclip/paralellized_kmeans_dino_embs_configs.yaml",
+#         help=".yaml config file path",
+#     )
+#     # -- slurm parameters
+#     parser.add_argument(
+#         "--partition", type=str, default="scaling_data_pruning", help="partition"
+#     )
+#     parser.add_argument("--ngpus", type=int, default=1, help="number of gpus")
+#     parser.add_argument("--cpus-per-task", type=int, default=10, help="number of cpus")
+#     parser.add_argument(
+#         "--timeout", type=int, default=1500, help="job timeout in minutes"
+#     )
 
-    args = parser.parse_args()
+#     args = parser.parse_args()
 
-    # Load configuration file
-    with open(args.confg_file, "r") as y_file:
-        params = yaml.load(y_file, Loader=yaml.FullLoader)
+#     # Load configuration file
+#     with open(args.confg_file, "r") as y_file:
+#         params = yaml.load(y_file, Loader=yaml.FullLoader)
 
-    ## -- Logging directory
-    args.save_folder = params["save_folder"]
+#     ## -- Logging directory
+#     args.save_folder = params["save_folder"]
 
-    # SLURM CONFIG
-    PARTITION = args.partition
-    NODES = 1
-    NGPUS = args.ngpus
-    CPUS_PER_TASKS = args.cpus_per_task
-    TIMEOUT = args.timeout
+#     # SLURM CONFIG
+#     PARTITION = args.partition
+#     NODES = 1
+#     NGPUS = args.ngpus
+#     CPUS_PER_TASKS = args.cpus_per_task
+#     TIMEOUT = args.timeout
 
-    # Configure submitit executor
-    submitit_path = f"{args.save_folder}/compute_centorids_job_%j"
-    executor = submitit.AutoExecutor(folder=submitit_path, slurm_max_num_timeout=30)
-    executor.update_parameters(
-        slurm_partition=PARTITION,
-        nodes=NODES,
-        tasks_per_node=1,
-        cpus_per_task=CPUS_PER_TASKS,
-        gpus_per_node=NGPUS,
-        slurm_mem_per_gpu="55G",
-        timeout_min=TIMEOUT,
-    )
+#     # Configure submitit executor
+#     submitit_path = f"{args.save_folder}/compute_centorids_job_%j"
+#     executor = submitit.AutoExecutor(folder=submitit_path, slurm_max_num_timeout=30)
+#     executor.update_parameters(
+#         slurm_partition=PARTITION,
+#         nodes=NODES,
+#         tasks_per_node=1,
+#         cpus_per_task=CPUS_PER_TASKS,
+#         gpus_per_node=NGPUS,
+#         slurm_mem_per_gpu="55G",
+#         timeout_min=TIMEOUT,
+#     )
 
-    # Submit job
-    job = executor.submit(main, args)
-    print("Submitted job_id:", job.job_id)
+#     # Submit job
+#     job = executor.submit(main, args)
+#     print("Submitted job_id:", job.job_id)

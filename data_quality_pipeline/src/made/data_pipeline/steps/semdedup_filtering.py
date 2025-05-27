@@ -1,3 +1,4 @@
+import json
 import os
 import ray
 import time
@@ -5,7 +6,10 @@ import logging
 import torch
 import numpy as np
 
+from collections import defaultdict
+from datetime import datetime
 from pathlib import Path
+from PIL import Image
 from functools import partial
 from transformers import CLIPModel, CLIPImageProcessor
 from torch.utils.data import DataLoader
@@ -13,22 +17,25 @@ from torch.utils.data import DataLoader
 from made.paths import MADE_PATH
 from made.config import Config
 from made.semdedup.compute_pretrained_embeddings import get_embeddings
-from made.semdedup.dataloader import (
-    TarImageDataset,
-    FilteredTarImageDataset, 
-    custom_collate_fn)
 from made.semdedup.clustering.clustering import compute_centroids
 from made.semdedup.clustering.sort_clusters import assign_and_sort_clusters
 from made.semdedup.semdedup_logic import process_shard
 from made.semdedup.extract_dedup_data import extract_pruned_data
-from made.data_pipeline.steps.base import apply_filtering_step, FilteringBlock
+from made.data_pipeline.steps.base import execute_filter, FilteringBlock
 from made.data_pipeline.metrics.metrics_store import MetricsStore
-
+from made.data_pipeline.data.datacomp_handler import decode_webdataset, get_next_batch
+from itertools import compress
 
 @ray.remote(num_gpus=0.1)
 class SemDeDupFilter(FilteringBlock):
     def __init__(self, config_path: Path):
         self.config = Config(config_path)
+        self.model = CLIPModel.from_pretrained(
+            self.config.unimodal.semdedup.clip_model
+        )
+        self.image_processor = CLIPImageProcessor.from_pretrained(
+            self.config.unimodal.semdedup.clip_model
+        )
 
     def execute(
             self, 
@@ -37,10 +44,12 @@ class SemDeDupFilter(FilteringBlock):
             uids: list[str] = None
         ):
         _ = MetricsStore()
-        return remove_image_duplicates(
+        return semdedup_filtering(
+            self.model,
+            self.image_processor,
             tar_files, 
-            self.config,
             log_folder,
+            self.config,
             uids
             )
 
@@ -48,28 +57,40 @@ class SemDeDupFilter(FilteringBlock):
 logging.basicConfig(level=logging.INFO, 
                     format='%(asctime)s - %(levelname)s - %(message)s')
 
-# --- Main Pipeline Function ---
-def remove_image_duplicates(
-        tar_files_directory: str,
-        config: Config,
+def semdedup_filtering(
+        model,
+        image_processor,
+        tar_files: list[str | Path],
         log_folder: Path,
+        config: Config,
         uids: list[str] = None
 ):
-    
     logger = logging.getLogger("ray")
-    """
-    Runs the entire SemDeDup pipeline sequentially within a single process.
-    """
-    start_time = time.time()
+    # start_time = time.time()
     logger.info("Starting the SemDeDup pipeline...")
 
-    # --- Stage 1: Generate Embeddings ---
-    try:
-        logger.info("--- Stage 1: Generating Embeddings ---")
-        stage_start_time = time.time()
+    _validate_configuration(config)
 
-        model_name = config.unimodal.semdedup.clip_model
-        batch_size = config.unimodal.semdedup.batch_size
+    dataset = decode_webdataset(
+        tar_files,
+        get_images=True,
+        get_captions=False,
+        batch_size=config.unimodal.semdedup.batch_size,
+        valid_uids=uids
+    )
+
+    all_good_uids = []
+    filtered_uids_by_filter = defaultdict(list)
+
+    sample_count = 0
+    batch_id = 0
+    dataset_iter = iter(dataset)
+
+    try:
+        dataset_size = len(uids)
+        config.unimodal.semdedup.dataset_size = dataset_size
+
+        # model_name = config.unimodal.semdedup.clip_model
         paths_str_type = config.unimodal.semdedup.paths_str_type
         embed_float_type = config.unimodal.semdedup.embed_float_type
         emb_memory_loc = config.unimodal.semdedup.embs_memory_loc
@@ -80,23 +101,9 @@ def remove_image_duplicates(
         os.makedirs(os.path.dirname(paths_memory_loc), exist_ok=True)
 
         logger.info("Loading model and image processor...")
-        model = CLIPModel.from_pretrained(model_name)
-        image_processor = CLIPImageProcessor.from_pretrained(model_name)
-
-        logger.info("Setting up dataset and dataloader...")
-        dataset = TarImageDataset(tar_dir=tar_files_directory, transform=None)
-        filt_dataset = FilteredTarImageDataset(dataset, uids)
-        my_collate_fn = partial(custom_collate_fn, image_processor=image_processor)
-        dataloader = DataLoader(
-            filt_dataset,
-            batch_size=batch_size,
-            shuffle=False,
-            collate_fn=my_collate_fn,
-            num_workers=config.unimodal.semdedup.num_workers
-        )
-        dataset_size = len(filt_dataset)
-        config.unimodal.semdedup.dataset_size = dataset_size
-
+        # model = CLIPModel.from_pretrained(model_name)
+        # image_processor = CLIPImageProcessor.from_pretrained(model_name)
+        
         logger.info(f"Dataset size: {dataset_size}")
         logger.info("Initializing memmap arrays...")
         emb_array = np.memmap(
@@ -111,31 +118,111 @@ def remove_image_duplicates(
             mode='w+', 
             shape=(dataset_size,)
             )
+    except Exception as e:
+        logger.error(f"Error in initialization and model loading: {e}", exc_info=True)
+        return
 
-        logger.info("Computing embeddings...")
-        
+    while True:
+        logger.info("--- Stage 1: Computing Embeddings ---")
+        stage_start_time = time.time()
+        batch = get_next_batch(dataset_iter)
+        if batch is None:
+            break
+
+        batch_id += 1
+        sample_count += len(batch)
+
+        good_uids = batch[0]
+        good_images = batch[1]
+    
+        batch_indices = np.arange(sample_count - len(batch), sample_count)
+
+        filter_fn_parameters = {
+            "model": model,
+            "image_processor": image_processor,
+            "batch_size": config.unimodal.semdedup.batch_size,
+            "valid_uids": uids
+        }
+
         get_embeddings(
-            model, 
-            dataloader, 
-            emb_array, 
-            path_array
+            model,
+            good_images,
+            batch_indices,
+            emb_array,
+            path_array,
+            good_uids
         )
 
-        # Flush forces any changes in the memory-mapped arrays to be written to disk
-        # This ensures all embedding and path data is saved before closing the memmap files
-        emb_array.flush()
-        path_array.flush()
-        del emb_array
-        del path_array
-        del model, image_processor, dataloader, dataset, filt_dataset
-        if torch.cuda.is_available():
-             torch.cuda.empty_cache()
+        dummy_filter_mask = [1] * len(batch[0])
+        elapsed_time = time.time() - stage_start_time
+
+        if config.infrastructure.enable_metrics:
+            MetricsStore().add_filter_metric(
+                "get_embeddings",
+                batch_id,
+                len(batch[0]),
+                int(sum(dummy_filter_mask)),
+                elapsed_time,
+                filter_fn_parameters,
+                ["batch_size", "valid_uids"]
+            )
+        if config.infrastructure.save_filtered_uids:
+            bad_uids = list(compress(good_uids, [not m for m in dummy_filter_mask]))
+            filtered_uids_by_filter["semdedup"].extend(bad_uids)
 
         logger.info(f"Stage 1 finished in {time.time() - stage_start_time:.2f} seconds.")
 
-    except Exception as e:
-        logger.error(f"Error in Stage 1 (Embeddings): {e}", exc_info=True)
-        return
+        good_uids = list(compress(good_uids, [m for m in dummy_filter_mask]))
+        good_images = list(compress(good_images, [m for m in dummy_filter_mask]))
+
+        all_good_uids.append(good_uids)
+
+    # Flush forces any changes in the memory-mapped arrays to be written to disk
+    # This ensures all embedding and path data is saved before closing the memmap files
+    emb_array.flush()
+    path_array.flush()
+    del emb_array
+    del path_array
+    del model, image_processor, dataloader, dataset, filt_dataset
+    if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+
+    semdedup_filter_mask, elapsed_time = execute_filter(
+        filter_name=_get_semdedup_filter_mask,
+        config=config,
+        dataset_size=dataset_size,
+        emb_size=emb_size,
+        log_folder=log_folder
+    )
+ 
+    logger.info(f"[{datetime.now()}] Total samples processed: %s", sample_count)
+
+    if config.infrastructure.enable_metrics:
+        MetricsStore().save_to_file(log_folder)
+
+    if config.infrastructure.save_filtered_uids:
+        filtered_uids_path = log_folder / "bad_uids_multimodal_filtering.json"
+        with open(filtered_uids_path, 'w', encoding="utf-8") as f:
+            json.dump(filtered_uids_by_filter, f, indent=2)
+        logger.info("Filtered UIDs saved to %s", filtered_uids_path)
+
+    return semdedup_filter_mask
+  
+
+
+def _get_semdedup_filter_mask(
+        config: Config,
+        dataset_size: int,
+        emb_size: int,
+        log_folder: Path,
+):
+    
+    logger = logging.getLogger("ray")
+    """
+    Runs the entire SemDeDup pipeline sequentially within a single process.
+    """
+    start_time = time.time()
+    logger.info("Starting the SemDeDup pipeline...")
 
     # --- Stage 2: Clustering ---
     try:
@@ -172,17 +259,9 @@ def remove_image_duplicates(
         logger.info("--- Stage 3: Assigning and Sorting Clusters ---")
         stage_start_time = time.time()
 
-        # Reload memmaps for reading
-        # emb_memory = np.memmap(
-        #     emb_memory_loc,
-        #     dtype=embed_float_type,
-        #     mode='r',
-        #     shape=(dataset_size, emb_size)
-        # )
-
         paths_memory = np.memmap(
-            paths_memory_loc,
-            dtype=paths_str_type,
+            config.unimodal.semdedup.path_memory_loc,
+            dtype=config.unimodal.semdedup.paths_str_type,
             mode='r',
             shape=(config['dataset_size'],)
         )
@@ -224,7 +303,7 @@ def remove_image_duplicates(
         logger.info("--- Stage 5: Extracting Pruned Data List ---")
         stage_start_time = time.time()
 
-        extract_pruned_data(
+        all_good_uids = extract_pruned_data(
             config.unimodal.semdedup.sorted_clusters_path,
             config.unimodal.semdedup.semdedup_pruning_tables_path,
             config.unimodal.semdedup.eps,
@@ -246,7 +325,14 @@ def remove_image_duplicates(
     if config.infrastructure.enable_metrics:
         MetricsStore().save_to_file(log_folder)
     
-    return
+    return all_good_uids
 
-if __name__ == "__main__":
-    remove_image_duplicates()
+def _validate_configuration(config: Config):
+    if config.unimodal.semdedup.batch_size < 1:
+        raise ValueError("Batch size must be at least 1")
+    if config.unimodal.semdedup.clustering.num_clusters < 1:
+        raise ValueError("Number of clusters must be at least 1")
+    if config.unimodal.semdedup.clustering.niter < 1:
+        raise ValueError("Number of iterations must be at least 1")
+    if config.unimodal.semdedup.clustering.seed < 0:
+        raise ValueError("Seed must be a non-negative integer")
