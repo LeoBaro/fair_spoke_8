@@ -25,11 +25,11 @@ class UnimodalTextFilter(FilteringBlock):
         if device == "cpu":
             raise ValueError("UnimodalTextFilter filtering is not supported on CPU")
         self.language_detection_model = fasttext.load_model(
-            str(MADE_PATH / self.config.unimodal.lang_detection_model_path)
+            str(MADE_PATH / self.config.unimodal_text.lang_detection_model_path)
             )
-        self.tagging_model = spacy.load(self.config.unimodal.tagging_model_name)
+        self.tagging_model = spacy.load(self.config.unimodal_text.tagging_model_name)
         with open(
-            str(MADE_PATH / self.config.unimodal.good_captions_pos_distribution_path),
+            str(MADE_PATH / self.config.unimodal_text.good_captions_pos_distribution_path),
             'r'
             ) as file:
             self.common_pos_patterns = [line.strip() for line in file.readlines()]
@@ -67,7 +67,7 @@ def unimodal_text_filtering(
         tar_files,
         get_images=False,
         get_captions=True,
-        batch_size=config.unimodal.batch_size,
+        batch_size=config.unimodal_text.batch_size,
         valid_uids=uids
     )   
 
@@ -95,8 +95,8 @@ def unimodal_text_filtering(
         good_captions = batch[1]
 
         filter_fn_parameters = {
-            "min_words": config.unimodal.caption_min_words,
-            "min_chars": config.unimodal.caption_min_chars
+            "min_words": config.unimodal_text.caption_min_words,
+            "min_chars": config.unimodal_text.caption_min_chars
         }
         length_filter_mask, elapsed_time = execute_filter(
             filter_name=_get_filter_captions_by_length_mask,
@@ -125,8 +125,8 @@ def unimodal_text_filtering(
         # second step: filter by language
         filter_fn_parameters = {
                 "model": language_detection_model,
-                "target_language": config.unimodal.lang_detection_language,
-                "threshold": config.unimodal.lang_detection_score_threshold
+                "target_language": config.unimodal_text.lang_detection_language,
+                "threshold": config.unimodal_text.lang_detection_score_threshold
         }
         lang_filter_mask, elapsed_time = execute_filter(
             filter_name=_get_filter_captions_by_language_mask,
@@ -171,7 +171,7 @@ def unimodal_text_filtering(
                 int(sum(pos_filter_mask)),
                 elapsed_time,
                 filter_fn_parameters,
-                ["model", "target_pos_tags"]
+                ["model"]
             )
         if config.infrastructure.save_filtered_uids:
             bad_uids = list(compress(good_uids, [not m for m in pos_filter_mask]))
@@ -193,7 +193,8 @@ def unimodal_text_filtering(
         MetricsStore().save_to_file(log_folder)
 
     if config.infrastructure.save_filtered_uids:
-        filtered_uids_path = log_folder / "bad_uids_unimodal_text_filtering.json"
+        worker_id = ray.get_runtime_context().get_worker_id() if ray.is_initialized() else "local"
+        filtered_uids_path = log_folder / f"bad_uids_unimodal_text_filtering_{worker_id}.json"
         with open(filtered_uids_path, 'w', encoding="utf-8") as f:
             json.dump(filtered_uids_by_filter, f, indent=2)
         logger.info("Filtered UIDs saved to %s", filtered_uids_path)
@@ -259,11 +260,11 @@ def _get_filter_captions_by_pos_tags_mask(
     return mask
 
 def _validate_configuration(config: Config):
-    if config.unimodal.lang_detection_language not in ["en", "it", "es"]:
+    if config.unimodal_text.lang_detection_language not in ["en", "it", "es"]:
         raise ValueError("The language detection language must be either 'en' or 'it' or 'es'")
-    if config.unimodal.lang_detection_score_threshold < 0.1 or config.unimodal.lang_detection_score_threshold > 1.0:
+    if config.unimodal_text.lang_detection_score_threshold < 0.1 or config.unimodal_text.lang_detection_score_threshold > 1.0:
         raise ValueError("The language threshold must be between 0.1 and 1.0")
-    if config.unimodal.batch_size <= 0:
+    if config.unimodal_text.batch_size <= 0:
         raise ValueError("The batch size must be greater than 0")
-    if config.unimodal.lang_detection_model_path is None:
+    if config.unimodal_text.lang_detection_model_path is None:
         raise ValueError("The fasttext model path must be provided")

@@ -20,7 +20,7 @@ class UnimodalVisionFilter:
     def __init__(self, config_path: Path):
         super().__init__()
         self.config = Config(config_path)
-        self.reader = easyocr.Reader(['en'], gpu=True, user_network_directory=self.config.unimodal.text_detection_model_path)
+        self.reader = easyocr.Reader(['en'], gpu=True, user_network_directory=self.config.unimodal_vision.text_detection_model_path)
 
     def execute(self, tar_files: list[str | Path], log_folder: Path, uids: list[str] = None):
         _ = MetricsStore()
@@ -50,7 +50,7 @@ def unimodal_vision_filtering(
         tar_files,
         get_images=True,
         get_captions=False,
-        batch_size=config.unimodal.batch_size,
+        batch_size=config.unimodal_vision.batch_size,
         valid_uids=uids
     )   
     
@@ -77,9 +77,9 @@ def unimodal_vision_filtering(
         good_images = batch[1]
         
         filter_fn_parameters = {
-            "image_min_aspect_ratio": config.unimodal.image_min_aspect_ratio,
-            "image_max_aspect_ratio": config.unimodal.image_max_aspect_ratio,
-            "image_min_dimension": config.unimodal.image_min_dimension
+            "image_min_aspect_ratio": config.unimodal_vision.image_min_aspect_ratio,
+            "image_max_aspect_ratio": config.unimodal_vision.image_max_aspect_ratio,
+            "image_min_dimension": config.unimodal_vision.image_min_dimension
         }
         aspect_ratio_filter_mask, elapsed_time = execute_filter(
             filter_name=_get_images_by_aspect_ratio_filter_mask,
@@ -108,8 +108,8 @@ def unimodal_vision_filtering(
         # second step: remove images containing text
         filter_fn_parameters = {
             "model": text_detection_model,
-            "text_thresh": config.unimodal.text_threshold,
-            "mag_ratio": config.unimodal.text_detection_mag_ratio
+            "text_thresh": config.unimodal_vision.text_threshold,
+            "mag_ratio": config.unimodal_vision.text_detection_mag_ratio
         }
         text_filter_mask, elapsed_time = execute_filter(
             filter_name=_get_images_by_text_filter_mask,
@@ -146,7 +146,8 @@ def unimodal_vision_filtering(
         MetricsStore().save_to_file(log_folder)
 
     if config.infrastructure.save_filtered_uids:
-        filtered_uids_path = log_folder / "bad_uids_unimodal_vision_filtering.json"
+        worker_id = ray.get_runtime_context().get_worker_id() if ray.is_initialized() else "local"
+        filtered_uids_path = log_folder / f"bad_uids_unimodal_vision_filtering_{worker_id}.json"
         with open(filtered_uids_path, 'w', encoding="utf-8") as f:
             json.dump(filtered_uids_by_filter, f, indent=2)
         logger.info("Filtered UIDs saved to %s", filtered_uids_path)
@@ -303,5 +304,5 @@ def _get_images_by_text_filter_mask_batched(
 
 
 def _validate_configuration(config: Config):
-    if config.unimodal.image_min_aspect_ratio < 0.0 or config.unimodal.image_min_aspect_ratio > 1.0:
+    if config.unimodal_vision.image_min_aspect_ratio < 0.0 or config.unimodal_vision.image_min_aspect_ratio > 1.0:
         raise ValueError("The aspect ratio threshold must be between 0.0 and 1.0")

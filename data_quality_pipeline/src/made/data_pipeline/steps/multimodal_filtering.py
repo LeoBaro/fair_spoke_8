@@ -131,7 +131,8 @@ def multimodal_filtering(
         MetricsStore().save_to_file(log_folder)
 
     if config.infrastructure.save_filtered_uids:
-        filtered_uids_path = log_folder / "bad_uids_multimodal_filtering.json"
+        worker_id = ray.get_runtime_context().get_worker_id() if ray.is_initialized() else "local"
+        filtered_uids_path = log_folder / f"bad_uids_multimodal_filtering_{worker_id}.json"
         with open(filtered_uids_path, 'w', encoding="utf-8") as f:
             json.dump(filtered_uids_by_filter, f, indent=2)
         logger.info("Filtered UIDs saved to %s", filtered_uids_path)
