@@ -9,7 +9,8 @@ def cli():
     parser = argparse.ArgumentParser()
     parser.add_argument("-f", "--benchmark-file", type=str, required=True, help="CSV file with the benchmark results")
     parser.add_argument("-t", "--title", type=str, required=True)
-    parser.add_argument("-g", "--group_by", type=str, required=True, choices=["num_workers", "batch_size"])
+    parser.add_argument("-m", "--modalities", type=str, required=True, choices=["unimodal_text", "unimodal_vision", "multimodal"])
+    # parser.add_argument("-g", "--group_by", type=str, required=True, choices=["num_workers", "batch_size"])
 
     return parser.parse_args()
 
@@ -18,7 +19,7 @@ def main(args):
     df = pd.read_csv(args.benchmark_file)
     df["speedup"] = 1 - (df["took"] / max(df["took"]))
     
-    summary_df = df.groupby("num_workers").agg({"took": ["mean", "std"], "speedup": ["mean", "std"]}).reset_index()
+    summary_df = df.groupby(f"{args.modalities}_num_workers").agg({"took": ["mean", "std"], "speedup": ["mean", "std"]}).reset_index()
     summary_df.columns = ["Workers", "Mean Time (s)", "Std Dev", "Mean Speedup", "Std Dev Speedup"]
     
 
@@ -38,7 +39,7 @@ def main(args):
         label="Mean Execution Time ± Std Dev"
     )
     # Customize the plot
-    plt.xlabel("Number of Workers", fontsize=12)
+    plt.xlabel(f"Number of {args.modalities} Workers", fontsize=12)
     plt.ylabel("Mean Execution Time (s)", fontsize=12)
     plt.title(args.title, fontsize=14)
     plt.xticks(summary_df["Workers"])  # Ensure x-axis has correct worker values
@@ -60,7 +61,7 @@ def main(args):
         color="b",  # Line color
         label="Mean Speedup ± Std Dev"
     )
-    plt.xlabel("Number of Workers", fontsize=12)
+    plt.xlabel(f"Number of {args.modalities} Workers", fontsize=12)
     plt.ylabel("Mean Speedup (%)", fontsize=12)
     plt.title(args.title, fontsize=14)
     plt.xticks(summary_df["Workers"])  # Ensure x-axis has correct worker values
