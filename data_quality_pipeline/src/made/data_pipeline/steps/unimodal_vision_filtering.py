@@ -9,18 +9,20 @@ from PIL import Image
 from itertools import chain, compress
 from datetime import datetime
 from collections import defaultdict
+import time
 
 from made.config import Config
 from made.data_pipeline.metrics.metrics_store import MetricsStore
-from made.data_pipeline.steps.base import execute_filter
+from made.data_pipeline.steps.base import execute_filter, FilteringBlock
 from made.data_pipeline.data.datacomp_handler import decode_webdataset, get_next_batch
 
 @ray.remote(num_gpus=0.1)
-class UnimodalVisionFilter:
+class UnimodalVisionFilter(FilteringBlock):
     def __init__(self, config_path: Path):
         super().__init__()
         self.config = Config(config_path)
         self.reader = easyocr.Reader(['en'], gpu=True, user_network_directory=self.config.unimodal_vision.text_detection_model_path)
+        self.logger.info("Initializing UnimodalVisionFilter on %s", self.device)
 
     def execute(self, tar_files: list[str | Path], log_folder: Path, uids: list[str] = None):
         _ = MetricsStore()
@@ -62,6 +64,8 @@ def unimodal_vision_filtering(
     batch_id = 0
     dataset_iter = iter(dataset)
 
+    logger.info("Starting unimodal vision filtering")
+    start_time = time.time()
     while True:
         batch = get_next_batch(dataset_iter)
         if batch is None:
@@ -134,13 +138,13 @@ def unimodal_vision_filtering(
         good_uids = list(compress(good_uids, [m for m in text_filter_mask]))
         good_images = list(compress(good_images, [m for m in text_filter_mask]))
 
-
         all_good_uids.append(good_uids)
 
 
     all_good_uids = list(chain.from_iterable(all_good_uids))
 
-    logger.info(f"[{datetime.now()}] Total samples processed: %s", sample_count)
+    elapsed_time = time.time() - start_time
+    logger.info("Total samples processed: %s in %0.2f seconds", sample_count, elapsed_time)    
 
     if config.infrastructure.enable_metrics:
         MetricsStore().save_to_file(log_folder)

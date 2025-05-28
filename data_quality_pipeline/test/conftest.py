@@ -76,6 +76,7 @@ infrastructure:
     save_filtered_uids: false
     logging_level: DEBUG
     apply_filters: true
+    log_to_driver: true
 
 unimodal_text:
     num_workers: 1

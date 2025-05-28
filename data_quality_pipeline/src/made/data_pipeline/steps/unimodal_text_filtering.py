@@ -6,9 +6,8 @@ import spacy
 import json 
 from itertools import chain, compress
 from collections import defaultdict
-from datetime import datetime
-import torch
-import numpy as np
+import time
+
 from made.config import Config
 from made.paths import MADE_PATH
 from made.data_pipeline.metrics.metrics_store import MetricsStore
@@ -21,9 +20,7 @@ class UnimodalTextFilter(FilteringBlock):
     def __init__(self, config_path: Path):
         super().__init__()
         self.config = Config(config_path)
-        device = "cuda" if torch.cuda.is_available() else "cpu"
-        if device == "cpu":
-            raise ValueError("UnimodalTextFilter filtering is not supported on CPU")
+        self.logger.info("Initializing UnimodalTextFilter on %s", self.device)
         self.language_detection_model = fasttext.load_model(
             str(MADE_PATH / self.config.unimodal_text.lang_detection_model_path)
             )
@@ -79,6 +76,8 @@ def unimodal_text_filtering(
     batch_id = 0
     dataset_iter = iter(dataset)
 
+    logger.info("Starting unimodal text filtering")
+    start_time = time.time()
     while True:
         batch = get_next_batch(dataset_iter)
         if batch is None:
@@ -128,6 +127,7 @@ def unimodal_text_filtering(
                 "target_language": config.unimodal_text.lang_detection_language,
                 "threshold": config.unimodal_text.lang_detection_score_threshold
         }
+
         lang_filter_mask, elapsed_time = execute_filter(
             filter_name=_get_filter_captions_by_language_mask,
             captions=good_captions,
@@ -179,7 +179,6 @@ def unimodal_text_filtering(
 
         good_uids = list(compress(good_uids, [m for m in pos_filter_mask]))
 
-
         all_good_uids.append(good_uids)
 
 
@@ -187,7 +186,8 @@ def unimodal_text_filtering(
     # logger.info("Concatenating uids")
     all_good_uids = list(chain.from_iterable(all_good_uids))
 
-    logger.info(f"[{datetime.now()}] Total samples processed: %s", sample_count)
+    elapsed_time = time.time() - start_time
+    logger.info("Total samples processed: %s in %0.2f seconds", sample_count, elapsed_time)
 
     if config.infrastructure.enable_metrics:
         MetricsStore().save_to_file(log_folder)

@@ -22,7 +22,8 @@ def test_unimodal_text_filtering(tar_files, log_folder, config):
         )
     with open(
         str(MADE_PATH / config.unimodal_text.good_captions_pos_distribution_path),
-        'r'
+        'r',
+        encoding='utf-8'
     ) as file:
         common_pos_patterns = [line.strip() for line in file.readlines()]
     

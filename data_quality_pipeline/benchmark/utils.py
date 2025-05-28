@@ -8,6 +8,7 @@ infrastructure:
     save_filtered_uids: {config["save_filtered_uids"]}
     logging_level: WARNING
     apply_filters: true
+    log_to_driver: true
     
 unimodal_text:
     num_workers: {config["unimodal_text_num_workers"]} 

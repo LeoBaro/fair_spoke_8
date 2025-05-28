@@ -5,13 +5,13 @@ import ray
 import json
 import torch
 import numpy as np
-from numpy.typing import NDArray
+import time
 from PIL import Image
 from itertools import chain, compress
 from datetime import datetime
 from collections import defaultdict
-from time import time
 from transformers import CLIPProcessor, CLIPModel
+
 
 from made.config import Config
 from made.data_pipeline.metrics.metrics_store import MetricsStore
@@ -22,6 +22,7 @@ from made.data_pipeline.data.datacomp_handler import decode_webdataset, get_next
 class MultimodalFilter(FilteringBlock):
     def __init__(self, config_path: Path):
         super().__init__()
+        self.logger.info("Initializing MultimodalFilter on %s", self.device)
         self.config = Config(config_path)
         _validate_configuration(self.config)
         device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -29,7 +30,7 @@ class MultimodalFilter(FilteringBlock):
             raise ValueError("Multimodal filtering is not supported on CPU")
         os.environ["TOKENIZERS_PARALLELISM"] = "false"
         self.model = CLIPModel.from_pretrained(self.config.multimodal.dfn_model).to(device)
-        self.processor = CLIPProcessor.from_pretrained(self.config.multimodal.dfn_model) #  use_fast=True
+        self.processor = CLIPProcessor.from_pretrained(self.config.multimodal.dfn_model, use_fast=False) #  use_fast=True
 
     def execute(self, tar_files: list[str | Path], log_folder: Path, uids: list[str] = None):
         _ = MetricsStore()
@@ -73,6 +74,8 @@ def multimodal_filtering(
     batch_id = 0
     dataset_iter = iter(dataset)
 
+    logger.info("Starting multimodal filtering")
+    start_time = time.time()
     while True:
         batch = get_next_batch(dataset_iter)
         if batch is None:
@@ -125,7 +128,8 @@ def multimodal_filtering(
     # logger.info("Concatenating uids")
     all_good_uids = list(chain.from_iterable(all_good_uids))
 
-    logger.info(f"[{datetime.now()}] Total samples processed: %s", sample_count)
+    elapsed_time = time.time() - start_time
+    logger.info("Total samples processed: %s in %0.2f seconds", sample_count, elapsed_time)
 
     if config.infrastructure.enable_metrics:
         MetricsStore().save_to_file(log_folder)
@@ -152,24 +156,24 @@ def _get_dfn_score_filter_mask(
     """
     device = "cuda" if torch.cuda.is_available() else "cpu"
     similarity_scores = []
-    
+
     for img, txt in zip(images, captions):
-        try:
-            inputs = clip_processor(
-                text=[txt],
-                images=[img],
-                return_tensors="pt",
-                padding=True,
-                truncation=True,
-                max_length=clip_caption_max_length
-            ).to(device)
-            outputs = dfn_model(**inputs)
-            score = outputs.logits_per_image.item()
-            similarity_scores.append(score)
-        except Exception as e:
-            print(f"Error clip_processor: {e}")
-            similarity_scores.append(0)
-            continue
+        inputs = clip_processor(
+            text=[txt],
+            images=[img],
+            return_tensors="pt",
+            input_data_format="channels_last",
+            padding=True,
+            truncation=True,
+            max_length=clip_caption_max_length
+        ).to(device)
+        outputs = dfn_model(**inputs)
+        score = outputs.logits_per_image.item()
+        similarity_scores.append(score)
+        # except Exception as e:
+        #     print(f"Error clip_processor: {e}")
+        #     similarity_scores.append(0)
+        #     continue
     
     return _filter_by_percentile(similarity_scores, dfn_percentile_to_drop)
 

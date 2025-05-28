@@ -2,7 +2,9 @@ infrastructure:
   enable_metrics: true
   save_filtered_uids: false
   logging_level: DEBUG
+  log_to_driver: true
   apply_filters: true
+  
 
 unimodal_text:
   num_workers: 1
