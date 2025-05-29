@@ -103,12 +103,11 @@ unimodal:
         # -- model
         model_name: "openai/clip-vit-base-patch32"
         # -- directories
-        save_folder: "data/"
-        tar_files_directory: "data/raw"
-        sorted_clusters_path: "data/sorted_clusters"
-        semdedup_pruning_tables_path: "data/dataframes"
-        embs_memory_loc: "data/embeddings/embs.npy"
-        path_memory_loc: "data/embeddings/path.npy"
+        save_folder: "data_quality_pipeline/src/made/semdedup/data/"
+        sorted_clusters_path: "data_quality_pipeline/src/made/semdedup/data/sorted_clusters"
+        semdedup_pruning_tables_path: "data_quality_pipeline/src/made/semdedup/data/dataframes"
+        embs_memory_loc: "data_quality_pipeline/src/made/semdedup/data/embeddings/embs.npy"
+        path_memory_loc: "data_quality_pipeline/src/made/semdedup/data/embeddings/path.npy"
         # -- data type
         paths_str_type: 'U256'
         embed_float_type: 'float32'
@@ -121,18 +120,18 @@ unimodal:
         emd_size: 512
         # -- Clustering parameters
         clustering:
-        num_clusters: 50 #50000
-        niter: 100
-        keep_hard: True # True for hard examples
-        sim_metric: 'cosine' # choose form ['cosine', 'l2']
-        Kmeans_with_cos_dist: True # True for using cosine similarity for kmeans clustering
-        save_folder: "data/clustering"
-        text_emb_memory_loc: None
+            num_clusters: 50 #50000
+            niter: 100
+            keep_hard: True # True for hard examples
+            sim_metric: 'cosine' # choose form ['cosine', 'l2']
+            Kmeans_with_cos_dist: True # True for using cosine similarity for kmeans clustering
+            save_folder: "data_quality_pipeline/src/made/semdedup/data/clustering"
+            text_emb_memory_loc: None
         # -- seed
         seed: 1234
         # -- largest cluster size the memory is large enough to process. If the cluster size is larger than it, we will devide the cluster into small clusters and process each one separately.
         largest_cluster_size_to_process: 10000000
-        eps: 0.1
+        eps: 3.0
         eps_list: [
             0.00001, 0.00002, 0.00005, 0.0001, 0.0002, 0.0005, 0.001, 
             0.002, 0.005, 0.01, 0.02, 0.03, 0.04, 0.05, 
@@ -149,7 +148,7 @@ unimodal:
             ]
         which_to_keep: "easy"
         # -- output
-        output_txt_path: "data/kept_examples.txt"
+        output_txt_path: "data_quality_pipeline/src/made/semdedup/data/kept_examples.txt"
 multimodal:
     batch_size: 256
     dfn_model: leobaro/DFN-public
