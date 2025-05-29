@@ -12,22 +12,18 @@ from tqdm import tqdm
 import pandas as pd
 import os
 import pathlib
-import yaml
-import math
 import os
 from typing import List
-import random
 import numpy as np
-import pprint
 from tqdm import tqdm
-import argparse
+
 from typing import List, Tuple, Union
 from made.semdedup.clustering.utils import get_logger
 
 
 def assign_and_sort_clusters(
     data: Union[np.memmap, np.ndarray],
-    paths_list: Union[np.memmap, np.ndarray],
+    uids_list: Union[np.memmap, np.ndarray],
     sim_metric: str = "cosine",
     keep_hard: bool = True,
     kmeans_with_cos_dist: bool = False,
@@ -78,7 +74,7 @@ def assign_and_sort_clusters(
 
     dist_df = pd.DataFrame(
         {
-            "paths_list": paths_list,
+            "uids_list": uids_list,
             "nearest_cent": nearest_cent,
             "dist_to_cent": dist_to_cent,
         }
@@ -169,7 +165,7 @@ def rank_within_cluster(
             cluster_dists_to_cent = list(cluster_df["dist_to_cent"])
 
         cluster_label = np.full((len(cluster_df)), cluster_c).tolist()
-        example_paths = list(cluster_df["paths_list"])
+        example_paths = list(cluster_df["uids_list"])
         sort_descending = keep_hard
         cluster_sorted = sorted(
             zip(example_paths, cluster_items, cluster_dists_to_cent, cluster_label),

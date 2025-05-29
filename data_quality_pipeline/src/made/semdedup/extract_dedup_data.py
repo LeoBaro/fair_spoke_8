@@ -8,7 +8,7 @@ import os
 from tqdm import tqdm
 import pickle
 import numpy as np
-from made.semdedup.constants import IMAGE_NAME_INDEX
+from made.semdedup.constants import IMAGE_UID_INDEX
 
 
 def extract_pruned_data(
@@ -21,7 +21,7 @@ def extract_pruned_data(
 ):
 
     ## -- list of paths to the examples we want to keep/remove.
-    example_paths = []
+    example_uids = []
 
     for cluster_id in tqdm(range(0, num_clusters)):
 
@@ -43,11 +43,11 @@ def extract_pruned_data(
             cluster_i = cluster_i[semdedup_pruning_tables["indices"]]
         ## -- retrieve only the examples we want and add to the list.
         dedup_cluster = cluster_i[images_to_keep_or_remove]
-        example_paths += dedup_cluster[:, IMAGE_NAME_INDEX].astype("<U32").tolist()
+        example_uids += dedup_cluster[:, IMAGE_UID_INDEX].astype("<U32").tolist()
 
     # with open(output_txt_path, "w") as fp:
     #     fp.write("\n".join(example_paths))
 
     # print(f"DONE saving {len(example_paths)} image paths")
 
-    return example_paths
+    return example_uids

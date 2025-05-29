@@ -4,7 +4,7 @@
 # This source code is licensed under the license found in the
 # LICENSE file in the root directory of this source tree.
 
-IMAGE_NAME_INDEX = 0
+IMAGE_UID_INDEX = 0
 IMAGE_ID_IN_CLUSTER_INDEX = 1
 DIST_METRIC_INDEX = 2
 CLUSTER_NUM_INDEX = 3
