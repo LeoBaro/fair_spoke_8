@@ -5,7 +5,7 @@ from datetime import datetime
 from typing import Dict, Optional
 from collections import defaultdict
 
-from made.data_pipeline.common import Singleton
+from data_quality_pipeline.src.made.data_pipeline.common import Singleton
 import ray
 
 class MetricsStore(metaclass=Singleton):

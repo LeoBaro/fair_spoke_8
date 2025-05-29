@@ -1,6 +1,6 @@
 from typing import Callable, Any
 import time
-from made.data_pipeline.metrics.metrics_store import MetricsStore
+from data_quality_pipeline.src.made.data_pipeline.metrics.metrics_store import MetricsStore
 from abc import ABC, abstractmethod
 from pathlib import Path
 

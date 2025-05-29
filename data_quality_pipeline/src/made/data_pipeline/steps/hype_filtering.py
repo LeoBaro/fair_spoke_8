@@ -2,13 +2,13 @@ import ray
 import torch
 import torch.nn as nn
 import math
-import os
 import logging
 import numpy as np
 from pathlib import Path
 from itertools import chain
 from datetime import datetime
 from PIL import Image
+from tokenizer import tokenize
 
 from data_quality_pipeline.src.made.config import Config
 from data_quality_pipeline.src.made.data_pipeline.metrics.metrics_store import MetricsStore
@@ -33,7 +33,7 @@ class SpecificityFilter(FilteringBlock):
         self.model, self.trs = model_init(pretrained=self.model_weights)
         self.model = self.model.to(self.device).eval()
 
-    def execute(self, tar_files: list[str | Path], log_folder: Path, get_specificities = False):
+    def execute(self, tar_files: list[str | Path], log_folder: Path, hype_score = False, get_specificities = False):
         _ = MetricsStore()  # Metrics tracking if enabled
 
 
@@ -96,16 +96,18 @@ def specificity_filtering(
 
         with torch.no_grad():
             images_features = model.encode_image(batch_images)
+            text_features = model.encode_text(batch_text)
 
-        # Apply specificity filtering
+        # Apply specificity/hype filtering
+
         ok_uids, ok_samples, uids_filtered, samples_filtered = apply_filtering_step(
-            filter_name=_get_images_by_specificity_filter_mask,
+            filter_name=_get_images_by_hype_filter_mask,
             batch_id=batch_id,
             uids=batch[1],
             samples=images_features,
             apply_filters=config.infrastructure.apply_filters,
             parameters={
-                "specificity_threshold": config.specificity.specificity_threshold,
+                "specificity_threshold": config.specificity.hype_threshold,
                 "curvature": torch.tensor(config.specificity.curvature, dtype=torch.float32, device=device),
                 "img_ref": img_ref,
                 "txt_ref": txt_ref,
@@ -124,23 +126,24 @@ def specificity_filtering(
     return all_uids
 
 
-def _get_images_by_specificity_filter_mask(
+def _get_images_by_hype_filter_mask(
         images: torch.Tensor,
-        specificity_threshold: float,
+        captions: torch.Tensor,
+        hype_threshold: float,
         curvature: float,
-        img_ref: torch.Tensor,
-        txt_ref: torch.Tensor,
-        get_specificities = False,
+        get_specificities=False,
         ) -> list[bool] | tuple[list[bool], torch.Tensor]:
         """
-        Filter images based on specificity.
+        Filter images based on hype score.
         """
         specifities = specificity(image=images, curv=curvature, img_ref=img_ref, txt_ref=txt_ref)
+        meru_sim = similarity(images, captions, curv=curvature)
+        hype = specifities  + meru_sim
 
         if get_specificities:
             return ((specifities > specificity_threshold).tolist(), specifities)
 
-        return (specifities > specificity_threshold).tolist()
+        return (hype > hype_threshold).tolist()
 
 
 def _validate_configuration(config: Config):
@@ -181,7 +184,6 @@ def entailment(x, y, curvature):
 
     return exterior_xy - aperture_x
 
-
 @torch.cuda.amp.autocast(enabled=False)
 def expm(v, curvature, time_keepdim=False):
     v, curvature = v.float(), curvature.float()
@@ -193,3 +195,12 @@ def expm(v, curvature, time_keepdim=False):
     x_time = torch.sqrt(1 / curvature + torch.sum(x_space ** 2, dim=-1, keepdim=time_keepdim))
     return x_space, x_time
 
+@torch.cuda.amp.autocast(enabled=False)
+def similarity(x, y, curvature):
+    x, y = x.float(), y.float()
+    curvature = curvature.float()
+    x_space, x_time = expm(x, curvature, time_keepdim=True)
+    y_space, y_time = expm(y, curvature, time_keepdim=True)
+    xy_inner = x_space @ y_space.T - x_time * y_time.T
+    lorentzian_distance = torch.rsqrt(curvature) * torch.acosh(torch.clamp(-curvature * xy_inner, min=1e-8))
+    return -lorentzian_distance
