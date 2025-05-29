@@ -1,3 +1,4 @@
+import gc
 import json
 import os
 import ray
@@ -9,10 +10,8 @@ import numpy as np
 from collections import defaultdict
 from datetime import datetime
 from pathlib import Path
-from PIL import Image
-from functools import partial
+from itertools import compress
 from transformers import CLIPModel, CLIPImageProcessor
-from torch.utils.data import DataLoader
 
 from made.paths import MADE_PATH
 from made.config import Config
@@ -23,8 +22,11 @@ from made.semdedup.semdedup_logic import process_shard
 from made.semdedup.extract_dedup_data import extract_pruned_data
 from made.data_pipeline.steps.base import execute_filter, FilteringBlock
 from made.data_pipeline.metrics.metrics_store import MetricsStore
-from made.data_pipeline.data.datacomp_handler import decode_webdataset, get_next_batch
-from itertools import compress
+from made.data_pipeline.data.datacomp_handler import (
+    decode_webdataset, 
+    get_next_batch,
+    get_dataset_size
+)
 
 @ray.remote(num_gpus=0.1)
 class SemDeDupFilter(FilteringBlock):
@@ -71,6 +73,13 @@ def semdedup_filtering(
 
     _validate_configuration(config)
 
+    # -- Device
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    print(device)
+    # -- model 
+    model = model.to(device)
+    model = model.eval()
+    
     dataset = decode_webdataset(
         tar_files,
         get_images=True,
@@ -87,10 +96,9 @@ def semdedup_filtering(
     dataset_iter = iter(dataset)
 
     try:
-        dataset_size = len(uids)
+        dataset_size = get_dataset_size(dataset)
         config.unimodal.semdedup.dataset_size = dataset_size
 
-        # model_name = config.unimodal.semdedup.clip_model
         paths_str_type = config.unimodal.semdedup.paths_str_type
         embed_float_type = config.unimodal.semdedup.embed_float_type
         emb_memory_loc = config.unimodal.semdedup.embs_memory_loc
@@ -99,10 +107,6 @@ def semdedup_filtering(
 
         os.makedirs(os.path.dirname(emb_memory_loc), exist_ok=True)
         os.makedirs(os.path.dirname(paths_memory_loc), exist_ok=True)
-
-        logger.info("Loading model and image processor...")
-        # model = CLIPModel.from_pretrained(model_name)
-        # image_processor = CLIPImageProcessor.from_pretrained(model_name)
         
         logger.info(f"Dataset size: {dataset_size}")
         logger.info("Initializing memmap arrays...")
@@ -121,21 +125,23 @@ def semdedup_filtering(
     except Exception as e:
         logger.error(f"Error in initialization and model loading: {e}", exc_info=True)
         return
+    logger.info("--- Stage 1: Computing Embeddings ---")
+    batch_size = config.unimodal.semdedup.batch_size
+    dummy_filter_mask = [1] * batch_size
 
     while True:
-        logger.info("--- Stage 1: Computing Embeddings ---")
         stage_start_time = time.time()
         batch = get_next_batch(dataset_iter)
         if batch is None:
             break
 
         batch_id += 1
-        sample_count += len(batch)
-
         good_uids = batch[0]
         good_images = batch[1]
+        sample_count += len(good_uids)
+
     
-        batch_indices = np.arange(sample_count - len(batch), sample_count)
+        batch_indices = np.arange(sample_count - len(good_uids), sample_count)
 
         filter_fn_parameters = {
             "model": model,
@@ -144,16 +150,17 @@ def semdedup_filtering(
             "valid_uids": uids
         }
 
+        inputs = image_processor(images = good_images, return_tensors = "pt")
+        data_batch = inputs["pixel_values"].to('cuda')
+
         get_embeddings(
             model,
-            good_images,
+            data_batch,
             batch_indices,
             emb_array,
             path_array,
             good_uids
         )
-
-        dummy_filter_mask = [1] * len(batch[0])
         elapsed_time = time.time() - stage_start_time
 
         if config.infrastructure.enable_metrics:
@@ -161,7 +168,7 @@ def semdedup_filtering(
                 "get_embeddings",
                 batch_id,
                 len(batch[0]),
-                int(sum(dummy_filter_mask)),
+                int(len(batch[0])),
                 elapsed_time,
                 filter_fn_parameters,
                 ["batch_size", "valid_uids"]
@@ -170,29 +177,37 @@ def semdedup_filtering(
             bad_uids = list(compress(good_uids, [not m for m in dummy_filter_mask]))
             filtered_uids_by_filter["semdedup"].extend(bad_uids)
 
-        logger.info(f"Stage 1 finished in {time.time() - stage_start_time:.2f} seconds.")
 
         good_uids = list(compress(good_uids, [m for m in dummy_filter_mask]))
         good_images = list(compress(good_images, [m for m in dummy_filter_mask]))
 
         all_good_uids.append(good_uids)
 
+    logger.info(f"Stage 1 finished in {time.time() - stage_start_time:.2f} seconds.")
     # Flush forces any changes in the memory-mapped arrays to be written to disk
     # This ensures all embedding and path data is saved before closing the memmap files
     emb_array.flush()
     path_array.flush()
     del emb_array
     del path_array
-    del model, image_processor, dataloader, dataset, filt_dataset
+    del model, image_processor, dataset
     if torch.cuda.is_available():
-            torch.cuda.empty_cache()
+        gc.collect()
+        torch.cuda.empty_cache()
+        torch.cuda.synchronize()
+
+    filter_fn_parameters = {
+        "config": config,
+        "dataset_size": dataset_size,
+        "emb_size": emb_size,
+        "log_folder": log_folder
+    }
 
     semdedup_filter_mask, elapsed_time = execute_filter(
         filter_name=_get_semdedup_filter_mask,
-        config=config,
-        dataset_size=dataset_size,
-        emb_size=emb_size,
-        log_folder=log_folder
+        captions=None,
+        images=None,
+        parameters=filter_fn_parameters
     )
  
     logger.info(f"[{datetime.now()}] Total samples processed: %s", sample_count)
@@ -207,7 +222,6 @@ def semdedup_filtering(
         logger.info("Filtered UIDs saved to %s", filtered_uids_path)
 
     return semdedup_filter_mask
-  
 
 
 def _get_semdedup_filter_mask(
@@ -222,7 +236,6 @@ def _get_semdedup_filter_mask(
     Runs the entire SemDeDup pipeline sequentially within a single process.
     """
     start_time = time.time()
-    logger.info("Starting the SemDeDup pipeline...")
 
     # --- Stage 2: Clustering ---
     try:
@@ -240,7 +253,7 @@ def _get_semdedup_filter_mask(
             data = emb_memory,
             ncentroids = config.unimodal.semdedup.clustering.num_clusters,
             niter = config.unimodal.semdedup.clustering.niter,   
-            seed = config.unimodal.semdedup.clustering.seed,
+            seed = config.unimodal.semdedup.seed,
             Kmeans_with_cos_dist = config.unimodal.semdedup.clustering.Kmeans_with_cos_dist,
             save_folder = config.unimodal.semdedup.clustering.save_folder,
             logger = logger,
@@ -263,12 +276,12 @@ def _get_semdedup_filter_mask(
             config.unimodal.semdedup.path_memory_loc,
             dtype=config.unimodal.semdedup.paths_str_type,
             mode='r',
-            shape=(config['dataset_size'],)
+            shape=(dataset_size,)
         )
 
         assign_and_sort_clusters(
             data = emb_memory,
-            paths_list = paths_memory,
+            uids_list = paths_memory,
             sim_metric = config.unimodal.semdedup.clustering.sim_metric,
             keep_hard = config.unimodal.semdedup.clustering.keep_hard,
             kmeans_with_cos_dist = config.unimodal.semdedup.clustering.Kmeans_with_cos_dist,
@@ -277,8 +290,7 @@ def _get_semdedup_filter_mask(
             cluster_ids = range(0, config.unimodal.semdedup.clustering.num_clusters),
             logger=logger
         )
-        del emb_memory
-        del paths_memory
+        del emb_memory, paths_memory
 
         logger.info(f"Stage 3 finished in {time.time() - stage_start_time:.2f} seconds.")
     except Exception as e:
@@ -309,7 +321,7 @@ def _get_semdedup_filter_mask(
             config.unimodal.semdedup.eps,
             config.unimodal.semdedup.clustering.num_clusters,
             config.unimodal.semdedup.output_txt_path,
-            retreive_kept_samples=config.get('retreive_kept_samples', True)
+            retreive_kept_samples = getattr(config, 'retreive_kept_samples', True)
         )
 
         logger.info(f"Stage 5 finished in {time.time() - stage_start_time:.2f} seconds.")
@@ -334,5 +346,3 @@ def _validate_configuration(config: Config):
         raise ValueError("Number of clusters must be at least 1")
     if config.unimodal.semdedup.clustering.niter < 1:
         raise ValueError("Number of iterations must be at least 1")
-    if config.unimodal.semdedup.clustering.seed < 0:
-        raise ValueError("Seed must be a non-negative integer")

@@ -35,7 +35,8 @@ def execute_filter(
     elif images is not None:
         boolean_mask = filter_name(images, **parameters)
     else:
-        raise ValueError("No samples to filter")
+        boolean_mask = filter_name(**parameters)
+        # raise ValueError("No samples to filter")
     elapsed_time = time.time() - start_time
     return  boolean_mask, elapsed_time
 
