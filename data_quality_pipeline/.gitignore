@@ -8,7 +8,5 @@ test/logs/*
 ok_uids.npy
 **/*.bin
 benchmark/data/*
-test/data/_*
-test/data/*[0-9].tar
 benchmark/data_test
 benchmark/out_*
