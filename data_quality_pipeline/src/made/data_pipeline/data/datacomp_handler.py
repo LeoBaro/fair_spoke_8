@@ -76,3 +76,13 @@ def get_next_batch(dataset_iter: iter):
         return next(dataset_iter)
     except StopIteration:
         return None
+
+def get_dataset_size(dataset: wds.WebDataset):
+    total_samples = 0
+    dataset_iter = iter(dataset)
+    while True:
+        batch = get_next_batch(dataset_iter)
+        if batch is None:
+            break
+        total_samples += len(batch[0])
+    return total_samples
