@@ -6,40 +6,12 @@ from time import time
 from pathlib import Path
 
 from made.config import Config
-from made.data_pipeline.utils import collect_tar_files, save_uids, shutdown_ray
+from made.bin.cli import cli
+from made.data_pipeline.utils import connect_or_start_ray, collect_tar_files, save_uids, cleanup
 from made.data_pipeline.pipeline import ActorGroupPipeline
-from made.data_pipeline.common import Singleton
 
 
-def cli():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--shards_path", required=True, nargs="+")
-    parser.add_argument("--ray-address", type=str, required=True)
-    parser.add_argument("--log-folder", type=str, required=True)
-    parser.add_argument("--output-folder", type=str, required=True)
-    parser.add_argument("--config-path", type=str, required=False, default=None)
-    return parser.parse_args()
-
-def connect_or_start_ray(ray_address, logging_level):
-    if ray_address:
-        print("Connecting to Ray at", ray_address)
-        ray.init(
-            address=ray_address,
-            logging_level=getattr(logging, logging_level),
-            log_to_driver=True
-        )
-    else:
-        print("Starting Ray locally")
-        ray.init(
-            logging_level=getattr(logging, logging_level),
-            log_to_driver=True
-        )
-
-def cleanup():
-    shutdown_ray()
-    Singleton.destroy_instance(Config)
-
-def make_pipeline(config_path: str | Path, shards_path: list[str | Path], log_folder: str | Path):
+def make_pipeline(config_path: str | Path):
 
     actor_group_pipeline = ActorGroupPipeline()
 
@@ -56,28 +28,27 @@ def make_pipeline(config_path: str | Path, shards_path: list[str | Path], log_fo
 def main(args):
     config = Config(args.config_path)
 
-    connect_or_start_ray(args.ray_address, Config().infrastructure.logging_level)
+    connect_or_start_ray(args.ray_address, Config().infrastructure.logging_level, Config().infrastructure.log_to_driver, args.log_folder)
 
     #atexit.register(save_aggregated_metrics)
 
     logger = logging.getLogger("ray")
-    logger.info("Starting pipeline")
-    logger.info("Num workers: %s", config.infrastructure.num_workers)
+
+    logger.info("Configuration:\n %s", config)
     
-    made_pipeline = make_pipeline(args.config_path, collect_tar_files(args.shards_path), args.log_folder)
+    made_pipeline = make_pipeline(args.config_path)
 
     s = time()
-    ok_uids = made_pipeline.execute(
+    good_uids = made_pipeline.execute(
         collect_tar_files(args.shards_path), 
         args.log_folder
     )
     took = time() - s
-    logger.info(f"Pipeline completed. Took {took:0.2f} seconds")
+    logger.info("Pipeline completed. Took %0.2f seconds", took)
 
 
-    if config.infrastructure.save_npy:
-        logger.info("Saving uids")
-        save_uids(ok_uids, args.output_folder)
+    logger.info("Saving uids to %s", args.output_folder)
+    save_uids(good_uids, args.output_folder)
 
     cleanup()
 

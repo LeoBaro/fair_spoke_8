@@ -1,23 +1,28 @@
 from pathlib import Path
-import logging
+import logging  
+import json
 import ray
 import easyocr
 import numpy as np
 from numpy.typing import NDArray
 from PIL import Image
-from itertools import chain
+from itertools import chain, compress
 from datetime import datetime
+from collections import defaultdict
+import time
 
 from made.config import Config
 from made.data_pipeline.metrics.metrics_store import MetricsStore
-from made.data_pipeline.steps.base import apply_filtering_step
+from made.data_pipeline.steps.base import execute_filter, FilteringBlock
 from made.data_pipeline.data.datacomp_handler import decode_webdataset, get_next_batch
 
 @ray.remote(num_gpus=0.1)
-class UnimodalVisionFilter:
+class UnimodalVisionFilter(FilteringBlock):
     def __init__(self, config_path: Path):
+        super().__init__()
         self.config = Config(config_path)
-        self.reader = easyocr.Reader(['en'], gpu=True, user_network_directory=self.config.unimodal.text_detection_model_path)
+        self.reader = easyocr.Reader(['en'], gpu=True, user_network_directory=self.config.unimodal_vision.text_detection_model_path)
+        self.logger.info("Initializing UnimodalVisionFilter on %s", self.device)
 
     def execute(self, tar_files: list[str | Path], log_folder: Path, uids: list[str] = None):
         _ = MetricsStore()
@@ -47,16 +52,20 @@ def unimodal_vision_filtering(
         tar_files,
         get_images=True,
         get_captions=False,
-        batch_size=config.unimodal.batch_size,
+        batch_size=config.unimodal_vision.batch_size,
         valid_uids=uids
     )   
     
     # logger.info("Iterating over dataset")
-    all_uids = []
+    all_good_uids = []
+    filtered_uids_by_filter = defaultdict(list)
+
     sample_count = 0
     batch_id = 0
     dataset_iter = iter(dataset)
 
+    logger.info("Starting unimodal vision filtering")
+    start_time = time.time()
     while True:
         batch = get_next_batch(dataset_iter)
         if batch is None:
@@ -68,65 +77,86 @@ def unimodal_vision_filtering(
 
         # ------------------------------------------------------------------------ 
         # first step: filter by aspect ratio
-        ok_uids, ok_samples, uids_filtered, samples_filtered = apply_filtering_step(
+        good_uids = batch[0]
+        good_images = batch[1]
+        
+        filter_fn_parameters = {
+            "image_min_aspect_ratio": config.unimodal_vision.image_min_aspect_ratio,
+            "image_max_aspect_ratio": config.unimodal_vision.image_max_aspect_ratio,
+            "image_min_dimension": config.unimodal_vision.image_min_dimension
+        }
+        aspect_ratio_filter_mask, elapsed_time = execute_filter(
             filter_name=_get_images_by_aspect_ratio_filter_mask,
-            batch_id=batch_id,
-            uids=batch[0],
-            samples=batch[1],
-            apply_filters=config.infrastructure.apply_filters,
-            parameters = {
-                "image_min_aspect_ratio": config.unimodal.image_min_aspect_ratio,
-                "image_max_aspect_ratio": config.unimodal.image_max_aspect_ratio,
-                "image_min_dimension": config.unimodal.image_min_dimension
-            }
+            captions=None,
+            images=good_images,
+            parameters = filter_fn_parameters
         )
+        if config.infrastructure.enable_metrics:
+            MetricsStore().add_filter_metric(
+                "_get_images_by_aspect_ratio_filter_mask",
+                batch_id,
+                len(good_images),
+                int(sum(aspect_ratio_filter_mask)),
+                elapsed_time,
+                filter_fn_parameters,
+                ["image_min_aspect_ratio", "image_max_aspect_ratio", "image_min_dimension"]
+            )
+        if config.infrastructure.save_filtered_uids:
+            bad_uids = list(compress(good_uids, [not m for m in aspect_ratio_filter_mask]))
+            filtered_uids_by_filter["aspect_ratio"].extend(bad_uids)
 
-
-
-        # filter_mask: list[bool]
-        # filter_mask = _get_images_by_aspect_ratio_filter_mask(
-        #     images,
-        #     Config().unimodal.image_min_aspect_ratio,
-        #     Config().unimodal.image_max_aspect_ratio
-        # )
-        # ok_uids, ok_images, uids_filtered, images_filtered = apply_filter_mask(
-        #     uids, images, filter_mask,
-        #     filter_name="_get_images_by_aspect_ratio_filter_mask",
-        #     batch_id=batch_id
-        # )
-
+        good_uids = list(compress(good_uids, [m for m in aspect_ratio_filter_mask]))
+        good_images = list(compress(good_images, [m for m in aspect_ratio_filter_mask]))
 
         # ------------------------------------------- 
         # second step: remove images containing text
-        ok_uids, ok_samples, uids_filtered, samples_filtered = apply_filtering_step(
-            filter_name=_get_images_by_text_filter_mask_batched,
-            batch_id=batch_id,
-            uids=ok_uids,
-            samples=ok_samples,
-            apply_filters=config.infrastructure.apply_filters,
-            parameters = {
-                "model": text_detection_model,
-                "text_thresh": config.unimodal.text_threshold,
-                "mag_ratio": config.unimodal.text_detection_mag_ratio
-            }
+        filter_fn_parameters = {
+            "model": text_detection_model,
+            "text_thresh": config.unimodal_vision.text_threshold,
+            "mag_ratio": config.unimodal_vision.text_detection_mag_ratio
+        }
+        text_filter_mask, elapsed_time = execute_filter(
+            filter_name=_get_images_by_text_filter_mask,
+            captions=None,
+            images=good_images,
+            parameters = filter_fn_parameters
         )
+        if config.infrastructure.enable_metrics:
+            MetricsStore().add_filter_metric(
+                "_get_images_by_text_filter_mask",
+                batch_id,
+                len(good_images),
+                int(sum(text_filter_mask)),
+                elapsed_time,
+                filter_fn_parameters,
+                ["model", "text_thresh", "mag_ratio"]
+            )
+        if config.infrastructure.save_filtered_uids:
+            bad_uids = list(compress(good_uids, [not m for m in text_filter_mask]))
+            filtered_uids_by_filter["text_detection"].extend(bad_uids)
+
+        good_uids = list(compress(good_uids, [m for m in text_filter_mask]))
+        good_images = list(compress(good_images, [m for m in text_filter_mask]))
+
+        all_good_uids.append(good_uids)
 
 
-        # ------------------------------------------- 
-        # third step: image specificity filtering
-        # TODO: implement this
+    all_good_uids = list(chain.from_iterable(all_good_uids))
 
-
-        all_uids.append(ok_uids)
-
-
-    # logger.info("Concatenating uids")
-    all_uids = list(chain.from_iterable(all_uids))
-    logger.info(f"[{datetime.now()}] Total samples processed: %s", sample_count)
+    elapsed_time = time.time() - start_time
+    logger.info("Total samples processed: %s in %0.2f seconds", sample_count, elapsed_time)    
 
     if config.infrastructure.enable_metrics:
         MetricsStore().save_to_file(log_folder)
-    return all_uids
+
+    if config.infrastructure.save_filtered_uids:
+        worker_id = ray.get_runtime_context().get_worker_id() if ray.is_initialized() else "local"
+        filtered_uids_path = log_folder / f"bad_uids_unimodal_vision_filtering_{worker_id}.json"
+        with open(filtered_uids_path, 'w', encoding="utf-8") as f:
+            json.dump(filtered_uids_by_filter, f, indent=2)
+        logger.info("Filtered UIDs saved to %s", filtered_uids_path)
+
+    return all_good_uids
 
 
 def _get_images_by_aspect_ratio_filter_mask(
@@ -174,6 +204,77 @@ def _get_images_by_text_filter_mask(
 
     return mask
 
+def get_max_dimension(images: list[NDArray]) -> int:
+    """
+    Get the maximum dimension (width or height) across all images in a list.
+    
+    Args:
+        images: List of numpy array images with shape (h, w, c)
+        
+    Returns:
+        Maximum dimension value
+    """
+    max_width = max(img.shape[1] for img in images)  # Width is at index 1
+    max_height = max(img.shape[0] for img in images)  # Height is at index 0
+    
+    return max(max_width, max_height)
+
+def pad_images_to_min_size(
+    images,
+    target_width,
+    target_height):
+    """
+    Add padding to images that have dimensions less than the specified width and height.
+    
+    Args:
+        images: List of numpy array images
+        target_width: Minimum width for the padded images
+        target_height: Minimum height for the padded images
+        
+    Returns:
+        List of padded numpy array images
+    """
+    padded_images = []
+    
+    for img in images:
+        height, width = img.shape[:2]
+        
+        # Calculate padding dimensions
+        pad_width = max(0, target_width - width)
+        pad_height = max(0, target_height - height)
+        
+        if pad_width > 0 or pad_height > 0:
+            # Calculate padding for each side
+            top = pad_height // 2
+            bottom = pad_height - top
+            left = pad_width // 2
+            right = pad_width - left
+            
+            # Get number of channels (handle both RGB and grayscale)
+            if len(img.shape) == 3:
+                # RGB image
+                padded_img = np.pad(
+                    img,
+                    ((top, bottom), (left, right), (0, 0)),
+                    mode='constant',
+                    constant_values=255
+                )
+            else:
+                # Grayscale image
+                padded_img = np.pad(
+                    img,
+                    ((top, bottom), (left, right)),
+                    mode='constant',
+                    constant_values=255
+                )
+            
+            padded_images.append(padded_img)
+        else:
+            # No padding needed
+            padded_images.append(img)
+            
+    return padded_images
+
 def _get_images_by_text_filter_mask_batched(
         images: list[Image.Image],
         model: easyocr.Reader,
@@ -186,11 +287,13 @@ def _get_images_by_text_filter_mask_batched(
 
     mask = [True] * len(images)
     img_array = [np.array(image) for image in images]
-    
+    max_dimension = get_max_dimension(img_array)
+    img_array = pad_images_to_min_size(img_array, max_dimension, max_dimension)
+
     text_results = model.readtext_batched(
         img_array,
-        n_width=256,
-        n_height=256,
+        # n_width=256*3,
+        # n_height=256*3,
         decoder = 'greedy',
         mag_ratio=mag_ratio,
         batch_size = len(img_array),
@@ -205,5 +308,5 @@ def _get_images_by_text_filter_mask_batched(
 
 
 def _validate_configuration(config: Config):
-    if config.unimodal.image_min_aspect_ratio < 0.0 or config.unimodal.image_min_aspect_ratio > 1.0:
+    if config.unimodal_vision.image_min_aspect_ratio < 0.0 or config.unimodal_vision.image_min_aspect_ratio > 1.0:
         raise ValueError("The aspect ratio threshold must be between 0.0 and 1.0")

@@ -4,6 +4,7 @@ from pathlib import Path
 from datetime import datetime
 from typing import Dict, Optional
 from collections import defaultdict
+import logging
 
 from data_quality_pipeline.src.made.data_pipeline.common import Singleton
 import ray
@@ -11,6 +12,7 @@ import ray
 class MetricsStore(metaclass=Singleton):
 
     def __init__(self):
+        self.logger = logging.getLogger("ray")
         self.filter_metrics = defaultdict(list)
         self.worker_id = ray.get_runtime_context().get_worker_id() if ray.is_initialized() else "local"
 
@@ -21,13 +23,12 @@ class MetricsStore(metaclass=Singleton):
             input_count: int,
             output_count: int,
             elapsed_time: float,
-            apply_filters: str,
-            extra_info: Optional[Dict] = None
+            extra_data: Optional[Dict] = None,
+            extra_data_keys: Optional[list[str]] = None
         ):
         
         metric = {
             "worker_id": self.worker_id,
-            "apply_filters": apply_filters,
             "batch_id": batch_id,
             "timestamp": datetime.now().isoformat(),
             "input_count": input_count,
@@ -37,8 +38,11 @@ class MetricsStore(metaclass=Singleton):
             "elapsed_time": round(elapsed_time, 5)
         }
         
-        if extra_info:
-            metric.update({p: str(v) for p, v in extra_info.items()})
+        if extra_data:
+            if extra_data_keys:
+                metric["parameters"] = {p: str(v) for p, v in extra_data.items() if p in extra_data_keys}
+            else:
+                metric["parameters"] = {p: str(v) for p, v in extra_data.items()}
             
         self.filter_metrics[func_name].append(metric)
     
@@ -69,8 +73,7 @@ class MetricsStore(metaclass=Singleton):
                 "min_elapsed_time_seconds": round(min(times), 5),
                 "max_elapsed_time_seconds": round(max(times), 5),
                 "calls": len(times),
-                "parameters": metrics[0]['parameters'],
-                "apply_filters": metrics[0]['apply_filters']
+                "parameters": metrics[0]['parameters']
             }
             
         return summary

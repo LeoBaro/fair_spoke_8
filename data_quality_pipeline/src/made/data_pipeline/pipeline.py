@@ -13,7 +13,8 @@ from typing import Any
 
 class ActorGroup:
     def __init__(self, actor_type: str, num_workers: int, config_path: str | Path):
-        print(f"Initializing actor group. Actor type: {actor_type}")
+        self.logger = logging.getLogger("ray")
+        self.logger.info("Initializing actor group. Actor type: %s with %d workers", actor_type, num_workers)
         self.actors = [getattr(sys.modules[__name__], actor_type)
             .options(name=f"{actor_type}_{i}")
             .remote(config_path) for i in range(num_workers)]
@@ -25,7 +26,8 @@ class ActorGroup:
     def execute_parallel(self, tar_files: list[str | Path], log_folder: str | Path, uids: list[str]):
         #print("Executing actor group. Num. actors: ", len(self.actors))
         tar_splits = [tar_files[i::len(self.actors)] for i in range(len(self.actors))]
-        #print("Number of tar splits per actor: ", [len(tar_split) for tar_split in tar_splits])
+        
+        self.logger.info("Executing %s. Number of tar files per worker: %s", str(self), [len(tar_split) for tar_split in tar_splits])
         self.futures = [
             actor.execute.remote(tar_split, log_folder, uids) for actor, tar_split in zip(self.actors, tar_splits)
         ]
@@ -50,6 +52,8 @@ class ActorGroupPipeline:
    
     def __init__(self):
         self.pipeline_steps = {}
+        self.logger = logging.getLogger("ray")
+
 
     def add_pipeline_step(self, merge_strategy: str):
         step_index = len(self.pipeline_steps)
@@ -80,41 +84,37 @@ class ActorGroupPipeline:
         }   
         """
         for step_index, pipeline_step in self.pipeline_steps.items():
-            print(f"Pipeline step {step_index}:")
+            self.logger.info("Pipeline step %d:", step_index)
             for actor_group in pipeline_step["actor_groups"]:
-                print(f"  Actor group: {actor_group}")
-            print(f"  Merge strategy: {pipeline_step['merge_strategy']}")
+                self.logger.info("  Actor group: %s", actor_group)
+            self.logger.info("  Merge strategy: %s\n", pipeline_step["merge_strategy"])
 
     def execute(self, tar_files: list[str | Path], log_folder: str | Path):
 
-        print("Executing the pipeline")
+        self.logger.info("Executing the pipeline")
 
         uids = None
 
         for step_index, pipeline_step in self.pipeline_steps.items():
-            print(f"Executing pipeline_step: {step_index}")
 
-            print("Executing parallel actor groups:")
-            for actor_group in self.pipeline_steps[step_index]["actor_groups"]:
-                print(f"{actor_group}")
-
+            self.logger.info("Executing pipeline step %d with %d parallel actor groups:", step_index, len(self.pipeline_steps[step_index]["actor_groups"]))
             for actor_group in self.pipeline_steps[step_index]["actor_groups"]:
                 actor_group.execute_parallel(tar_files, log_folder, uids)
 
+            self.logger.info("Waiting for actor groups to finish..")
             uids = [actor_group.get_results() for actor_group in self.pipeline_steps[step_index]["actor_groups"]]
 
-            print("Got the following number of samples from actor groups:")
+            self.logger.info("Actor groups finished. Got the following number of filtered samples:")
             for uid, actor_group in zip(uids, self.pipeline_steps[step_index]["actor_groups"]):
-                print(f"{actor_group}: {len(uid)}")
+                self.logger.info("  - %s: %d", actor_group, len(uid))
 
             if pipeline_step["merge_strategy"] == "intersection":
-                print("Merging results with intersection")
                 uids = set(uids[0]).intersection(*uids[1:])
+                
             elif pipeline_step["merge_strategy"] == "union":
-                print("Merging results with union")
                 uids = set(uids[0]).union(*uids[1:])
 
-            print(f"Number of samples after merging ({pipeline_step['merge_strategy']}):", len(uids))
+            self.logger.info("Number of samples after merging (%s): %d", pipeline_step["merge_strategy"], len(uids))
         
         return uids
 

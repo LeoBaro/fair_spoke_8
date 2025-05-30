@@ -3,114 +3,65 @@ import time
 from data_quality_pipeline.src.made.data_pipeline.metrics.metrics_store import MetricsStore
 from abc import ABC, abstractmethod
 from pathlib import Path
+import torch
+from PIL import Image
+import numpy as np
+import logging
 
 class FilteringBlock(ABC):
+
+    def __init__(self):
+        self.logger = logging.getLogger("ray")
+        self.device = "cuda" if torch.cuda.is_available() else "cpu"
+        if self.device == "cpu":
+            raise ValueError("Filtering block is not supported on CPU")
+
     @abstractmethod
     def execute(self, tar_files: list[str | Path], log_folder: Path, uids: list[str] = None):
         pass
     
 
-def apply_filtering_step(
-        filter_name: Callable,
-        batch_id: int,
-        uids: list[str],
-        samples: list[Any],
-        apply_filters: bool,
-        parameters: dict[str, Any]
-    ) -> tuple[list[str], list[Any], list[str], list[Any]]:
-    """
-    Apply a filtering step to the input data, record metrics, and return filtered results.
-
-    This function executes the specified filter function on the provided samples using the
-    given parameters. It computes a filter mask by calling the filter function, applies the mask
-    to separate valid samples from those filtered out, and records filtering metrics (such as
-    elapsed time and counts) via the MetricsStore.
-
-    Args:
-        `filter_name (Callable)`: The filter function to apply to the samples.
-        `batch_id (int)`: Identifier for the current batch; used for logging metrics.
-        `uids (list[str])`: List of unique identifiers corresponding to each sample.
-        `samples (list[Any])`: List of samples to be filtered.
-        `apply_filters (bool)`: If set to `false`, the original samples are returned as valid results and no samples are considered filtered out.
-                                If set to `true`, the mask is applied to the samples and only the valid samples are returned.
-        `parameters (dict[str, Any])`: Dictionary of parameters used to configure the filter function.
-
-    Returns:
-        tuple:
-        - `list[str]`: Unique identifiers for the samples that passed the filter.
-        - `list[Any]`: The samples that passed the filter.
-        - `list[str]`: Unique identifiers for the samples that were filtered out.
-        - `list[Any]`: The samples that were filtered out.
-
-    Side Effects:
-        Records filtering metrics using MetricsStore, including the name of the filter function,
-        batch ID, total and passed sample counts, processing time, and the filter parameters.
-    """
-
-    start_time = time.time()
-    filter_mask = execute_filter(filter_name, samples, parameters)
-    elapsed_time = time.time() - start_time
-
-    ok_uids, ok_samples, uids_filtered, samples_filtered = apply_filter_mask(
-        uids, samples, filter_mask
-    )
-    
-    MetricsStore().add_filter_metric(
-        filter_name.__name__,
-        batch_id,
-        len(uids),
-        len(ok_uids),
-        elapsed_time,
-        apply_filters,
-        {"parameters": parameters}
-    )
-
-    if not apply_filters:
-        ok_uids = uids
-        ok_samples = samples
-        uids_filtered = []
-        samples_filtered = []
-
-    return ok_uids, ok_samples, uids_filtered, samples_filtered
-
-
 def execute_filter(
         filter_name: Callable,
-        samples: list[Any],
+        captions: list[str],
+        images: list[Image.Image],
         parameters: dict[str, Any]
     ) -> list[bool]:
     """
     Apply a filter to the samples and return a boolean mask
     """
-    return filter_name(samples, **parameters)
-
+    start_time = time.time()
+    if captions is not None and images is not None:
+        boolean_mask = filter_name(captions, images, **parameters)
+    elif captions is not None:
+        boolean_mask = filter_name(captions, **parameters)
+    elif images is not None:
+        boolean_mask = filter_name(images, **parameters)
+    else:
+        raise ValueError("No samples to filter")
+    elapsed_time = time.time() - start_time
+    return  boolean_mask, elapsed_time
 
 def apply_filter_mask(
         uids: list[str],
-        samples: list[Any],
         mask: list[bool],
-    ) -> tuple[list[str], list[Any], list[str], list[Any]]:
+    ) -> tuple[list[str], list[str]]:
     """
     Apply a filter mask to items and data, returning both kept and filtered items
     
     Args:
         items: List of identifiers (e.g., UIDs)
-        data: List of data items (images or captions)
         mask: Boolean mask for filtering
     Returns:
-        Tuple of (kept_items, kept_data, filtered_items, filtered_data)
+        Tuple of (kept_items, filtered_items)
     """
     kept_uids = []
-    kept_samples = []
     filtered_uids = []
-    filtered_samples = []
-    
-    for item, sample, m in zip(uids, samples, mask):
+
+    for item, m in zip(uids, mask):
         if m:  # Keep this item
             kept_uids.append(item)
-            kept_samples.append(sample)
         else:  # Filter out this item
             filtered_uids.append(item)
-            filtered_samples.append(sample)
 
-    return kept_uids, kept_samples, filtered_uids, filtered_samples
+    return kept_uids, filtered_uids

@@ -10,7 +10,7 @@ from PIL import Image
 def compute_clip_score(batch):
     multimodal_config = Config().get_multimodal_config()
     processor = CLIPProcessor.from_pretrained(multimodal_config["clip_processor"])
-    model = CLIPModel.from_pretrained(multimodal_config["clip_model"])
+    model = CLIPModel.from_pretrained(multimodal_config["dfn_model"])
     scored = []
     for sample in batch:
         image = Image.open(sample["image"])

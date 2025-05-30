@@ -14,15 +14,16 @@ from made.data_pipeline.metrics.metrics_store import MetricsStore
 
 def test_unimodal_text_filtering(tar_files, log_folder, config):
     language_detection_model = fasttext.load_model(
-        str(MADE_PATH / config.unimodal.lang_detection_model_path)
+        str(MADE_PATH / config.unimodal_text.lang_detection_model_path)
         )
     spacy.require_gpu()
     tagging_model = spacy.load(
-        str(config.unimodal.tagging_model_name)
+        str(config.unimodal_text.tagging_model_name)
         )
     with open(
-        str(MADE_PATH / config.unimodal.good_captions_pos_distribution_path),
-        'r'
+        str(MADE_PATH / config.unimodal_text.good_captions_pos_distribution_path),
+        'r',
+        encoding='utf-8'
     ) as file:
         common_pos_patterns = [line.strip() for line in file.readlines()]
     

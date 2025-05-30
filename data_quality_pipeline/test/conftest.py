@@ -72,14 +72,15 @@ def config_path(request):
     with open(config_file_for_tests_path, "w") as f:
         f.write("""
 infrastructure:
-    num_workers: 2
     enable_metrics: true
+    save_filtered_uids: false
     logging_level: DEBUG
-    save_npy: true
     apply_filters: true
+    log_to_driver: true
 
-unimodal:
-    batch_size: 500
+unimodal_text:
+    num_workers: 1
+    batch_size: 50
 
     caption_min_words: 2
     caption_min_chars: 5
@@ -91,19 +92,24 @@ unimodal:
     tagging_model_name: en_core_web_trf
     good_captions_pos_distribution_path: models/common_pos_patterns.txt
 
+unimodal_vision:
+    num_workers: 1
+    batch_size: 50
+
     image_min_aspect_ratio: 0.8
     image_max_aspect_ratio: 3.0
     image_min_dimension: 50
 
-    text_threshold: 0.7
+    text_threshold: 0.6
     text_detection_model_path: models
     text_detection_mag_ratio: 0.5
                 
 multimodal:
+    num_workers: 1                
     batch_size: 256
-                
-    clip_model: openai/clip-vit-base-patch32
-    clip_score_threshold: 0.3
+    dfn_model: leobaro/DFN-public
+    dfn_percentile_to_drop: 25
+    clip_caption_max_length: 77
 
 """)
     return config_file_for_tests_path
