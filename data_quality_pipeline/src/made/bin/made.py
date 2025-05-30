@@ -7,7 +7,7 @@ from pathlib import Path
 
 from made.config import Config
 from made.bin.cli import cli
-from made.data_pipeline.utils import connect_or_start_ray, collect_tar_files, save_uids, shutdown_ray, cleanup
+from made.data_pipeline.utils import connect_or_start_ray, collect_tar_files, save_uids, cleanup
 from made.data_pipeline.pipeline import ActorGroupPipeline
 
 
@@ -28,13 +28,13 @@ def make_pipeline(config_path: str | Path):
 def main(args):
     config = Config(args.config_path)
 
-    connect_or_start_ray(args.ray_address, Config().infrastructure.logging_level)
+    connect_or_start_ray(args.ray_address, Config().infrastructure.logging_level, Config().infrastructure.log_to_driver, args.log_folder)
 
     #atexit.register(save_aggregated_metrics)
 
     logger = logging.getLogger("ray")
-    logger.info("Starting pipeline")
-    logger.info("Num workers: %s", config.infrastructure.num_workers)
+
+    logger.info("Configuration:\n %s", config)
     
     made_pipeline = make_pipeline(args.config_path)
 
@@ -44,10 +44,10 @@ def main(args):
         args.log_folder
     )
     took = time() - s
-    logger.info(f"Pipeline completed. Took {took:0.2f} seconds")
+    logger.info("Pipeline completed. Took %0.2f seconds", took)
 
 
-    logger.info("Saving uids")
+    logger.info("Saving uids to %s", args.output_folder)
     save_uids(good_uids, args.output_folder)
 
     cleanup()

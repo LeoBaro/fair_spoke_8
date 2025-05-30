@@ -7,23 +7,25 @@ from made.config import Config
 from made.data_pipeline.metrics.metrics_store import MetricsStore
 from made.data_pipeline.common import Singleton
 
-def connect_or_start_ray(ray_address, logging_level):
+def connect_or_start_ray(ray_address, logging_level, log_to_driver, log_folder):
     if ray_address:
-        print("Connecting to Ray at", ray_address)
         ray.init(
             address=ray_address,
             logging_level=getattr(logging, logging_level),
-            log_to_driver=True
+            log_to_driver=log_to_driver
         )
     else:
-        print("Starting Ray locally")
         ray.init(
             logging_level=getattr(logging, logging_level),
-            log_to_driver=True
+            log_to_driver=log_to_driver
         )
-
+    logger = logging.getLogger("ray")
+    logger.info("Setting up logging to %s", log_folder / "ray_log.log")
+    logger.addHandler(logging.FileHandler(log_folder / "ray_log.log"))
+    # formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+ 
 def cleanup():
-    print("Cleaning up..")
+    logging.getLogger("ray").info("Cleaning up..")
     shutdown_ray()
     Singleton.destroy_instance(Config)
 
@@ -32,7 +34,9 @@ def collect_tar_files(shards_path: list[str | Path], recursive: bool = False):
         tar_files = sorted([str(s) for s in Path(shards_path).glob("**/*.tar")])
     else:
         tar_files = sorted([str(s) for s in Path(shards_path).glob("*.tar")])
-    print(f"Found {len(tar_files)} tar files from {shards_path}")
+
+    logging.getLogger("ray").info("Found %d tar files from %s", len(tar_files), shards_path)
+    
     if len(tar_files) == 0:
         raise ValueError(f"No tar files found in {shards_path}")
     return tar_files
@@ -41,31 +45,37 @@ def get_worker_id():
     return ray.get_runtime_context().get_worker_id() if ray.is_initialized() else "local"
 
 def shutdown_ray():
+    logger = logging.getLogger("ray")
+
+    logger.info("Shutting down Ray")
     if ray.is_initialized():
         ray.shutdown()  
+    else:
+        logger.info("Ray is not initialized. Skipping shutdown")
 
 def print_execution_stats():
     """Print execution statistics and filter metrics summaries"""
+    logger = logging.getLogger("ray")
     summary = MetricsStore().get_summary()
     
-    print("\n===== Execution Time Statistics =====")
+    logger.info("\n===== Execution Time Statistics =====")
     for func_name, stats in summary["execution_times"].items():
-        print(f"{func_name}:")
-        print(f"  Mean = {stats['mean']:.4f}s, StdDev = {stats['stddev']:.4f}s")
-        print(f"  Min = {stats['min']:.4f}s, Max = {stats['max']:.4f}s, Calls = {stats['calls']}")
+        logger.info("%s:", func_name)
+        logger.info("  Mean = %0.4fs, StdDev = %0.4fs", stats["mean"], stats["stddev"])
+        logger.info("  Min = %0.4fs, Max = %0.4fs, Calls = %d", stats["min"], stats["max"], stats["calls"])
     
-    print("\n===== Filter Metrics Summary =====")
+    logger.info("\n===== Filter Metrics Summary =====")
     for func_name, stats in summary["filter_metrics"].items():
-        print(f"{func_name}:")
-        print(f"  Total input: {stats['total_input']}, Total output: {stats['total_output']}")
-        print(f"  Total filtered: {stats['total_filtered']} ({stats['avg_filter_rate']*100:.2f}%)")
-        print(f"  Batches processed: {stats['batches_processed']}")
+        logger.info("%s:", func_name)
+        logger.info("  Total input: %d, Total output: %d", stats["total_input"], stats["total_output"])
+        logger.info("  Total filtered: %d (%0.2f%%)", stats["total_filtered"], stats["avg_filter_rate"]*100)
+        logger.info("  Batches processed: %d", stats["batches_processed"])
     
     # Save metrics to file
     summary_path, details_path = MetricsStore().save_to_file(Config().infrastructure.log_folder)
-    print(f"\nMetrics saved to:")
-    print(f"  Summary: {summary_path}")
-    print(f"  Details: {details_path}")
+    logger.info("\nMetrics saved to:")
+    logger.info("  Summary: %s", summary_path)
+    logger.info("  Details: %s", details_path)
 
 def save_uids(uids: list[str], output_folder: str | Path):
     """
@@ -80,4 +90,4 @@ def save_uids(uids: list[str], output_folder: str | Path):
     out_filename = output_folder / "good_uids.npy"
     processed_uids = np.array([(int(uid[:16], 16), int(uid[16:32], 16)) for uid in uids], np.dtype("u8,u8"))
     processed_uids.sort()
-    np.save(out_filename, processed_uids)    
+    np.save(out_filename, processed_uids)
