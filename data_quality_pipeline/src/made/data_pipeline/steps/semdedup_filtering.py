@@ -10,7 +10,7 @@ import numpy as np
 from collections import defaultdict
 from datetime import datetime
 from pathlib import Path
-from itertools import compress
+from itertools import chain, compress
 from transformers import CLIPModel, CLIPImageProcessor
 
 from made.paths import MADE_PATH
@@ -173,15 +173,11 @@ def semdedup_filtering(
                 filter_fn_parameters,
                 ["batch_size", "valid_uids"]
             )
-        if config.infrastructure.save_filtered_uids:
-            bad_uids = list(compress(good_uids, [not m for m in dummy_filter_mask]))
-            filtered_uids_by_filter["semdedup"].extend(bad_uids)
-
 
         good_uids = list(compress(good_uids, [m for m in dummy_filter_mask]))
-        good_images = list(compress(good_images, [m for m in dummy_filter_mask]))
+        # good_images = list(compress(good_images, [m for m in dummy_filter_mask]))
 
-        all_good_uids.append(good_uids)
+        all_good_uids.extend(good_uids)
 
     logger.info(f"Stage 1 finished in {time.time() - stage_start_time:.2f} seconds.")
     # Flush forces any changes in the memory-mapped arrays to be written to disk
@@ -213,6 +209,24 @@ def semdedup_filtering(
     logger.info(f"[{datetime.now()}] Total samples processed: %s", sample_count)
 
     if config.infrastructure.enable_metrics:
+        MetricsStore().add_filter_metric(
+            "semdedup_filter_mask",
+            1,
+            len(all_good_uids),
+            int(sum(semdedup_filter_mask)),
+            elapsed_time,
+            filter_fn_parameters,
+            # ["batch_size", "valid_uids"]
+        )
+
+    if config.infrastructure.save_filtered_uids:
+        bad_uids = list(compress(all_good_uids, [not m for m in semdedup_filter_mask]))
+        filtered_uids_by_filter["semdedup"].extend(bad_uids)
+    
+    all_good_uids = list(compress(all_good_uids, [m for m in semdedup_filter_mask]))
+    all_good_uids = list(chain.from_iterable(all_good_uids))
+
+    if config.infrastructure.enable_metrics:
         MetricsStore().save_to_file(log_folder)
 
     if config.infrastructure.save_filtered_uids:
@@ -221,7 +235,7 @@ def semdedup_filtering(
             json.dump(filtered_uids_by_filter, f, indent=2)
         logger.info("Filtered UIDs saved to %s", filtered_uids_path)
 
-    return semdedup_filter_mask
+    return all_good_uids
 
 
 def _get_semdedup_filter_mask(
@@ -261,7 +275,9 @@ def _get_semdedup_filter_mask(
         )
         # del emb_memory # Close memmap
 
-        logger.info(f"Stage 2 finished in {time.time() - stage_start_time:.2f} seconds.")
+        logger.info(
+            f"Stage 2 finished in {time.time() - stage_start_time:.2f} seconds"
+        )
 
     except Exception as e:
         logger.error(f"Error in Stage 2 (Clustering): {e}", exc_info=True)
@@ -279,6 +295,8 @@ def _get_semdedup_filter_mask(
             shape=(dataset_size,)
         )
 
+        list_tot_uids = list(paths_memory)
+
         assign_and_sort_clusters(
             data = emb_memory,
             uids_list = paths_memory,
@@ -292,7 +310,9 @@ def _get_semdedup_filter_mask(
         )
         del emb_memory, paths_memory
 
-        logger.info(f"Stage 3 finished in {time.time() - stage_start_time:.2f} seconds.")
+        logger.info(
+            f"Stage 3 finished in {time.time() - stage_start_time:.2f} seconds"
+        )
     except Exception as e:
         logger.error(f"Error in Stage 3 (Sort Clusters): {e}", exc_info=True)
         return
@@ -304,7 +324,9 @@ def _get_semdedup_filter_mask(
           
         process_shard(shard=0, config=config)
 
-        logger.info(f"Stage 4 finished in {time.time() - stage_start_time:.2f} seconds.")
+        logger.info(
+            f"Stage 4 finished in {time.time() - stage_start_time:.2f} seconds."
+        )
 
     except Exception as e:
         logger.error(f"Error in Stage 4 (SemDeDup): {e}", exc_info=True)
@@ -324,7 +346,9 @@ def _get_semdedup_filter_mask(
             retreive_kept_samples = getattr(config, 'retreive_kept_samples', True)
         )
 
-        logger.info(f"Stage 5 finished in {time.time() - stage_start_time:.2f} seconds.")
+        logger.info(
+            f"Stage 5 finished in {time.time() - stage_start_time:.2f} seconds."
+        )
 
     except Exception as e:
         logger.error(f"Error in Stage 5 (Extract Data): {e}", exc_info=True)
@@ -332,12 +356,19 @@ def _get_semdedup_filter_mask(
 
     # --- Pipeline Complete ---
     total_time = time.time() - start_time
-    logger.info(f"--- Pipeline finished successfully in {total_time:.2f} seconds ({total_time/60:.2f} minutes) ---")
+    logger.info(
+        f"--- Pipeline finished successfully in {total_time:.2f} seconds "
+        f"({total_time/60:.2f} minutes) ---"
+    )
 
-    if config.infrastructure.enable_metrics:
-        MetricsStore().save_to_file(log_folder)
+    # if config.infrastructure.enable_metrics:
+    #     MetricsStore().save_to_file(log_folder)
     
-    return all_good_uids
+    mask = [
+        uid in list_tot_uids for uid in all_good_uids
+    ]
+    
+    return mask
 
 def _validate_configuration(config: Config):
     if config.unimodal.semdedup.batch_size < 1:

@@ -45,9 +45,9 @@ def extract_pruned_data(
         dedup_cluster = cluster_i[images_to_keep_or_remove]
         example_uids += dedup_cluster[:, IMAGE_UID_INDEX].astype("<U32").tolist()
 
-    # with open(output_txt_path, "w") as fp:
-    #     fp.write("\n".join(example_paths))
+    with open(output_txt_path, "w") as fp:
+        fp.write("\n".join(example_uids))
 
-    # print(f"DONE saving {len(example_paths)} image paths")
+    print(f"DONE saving {len(example_uids)} image paths")
 
     return example_uids

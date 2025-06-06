@@ -131,7 +131,7 @@ unimodal:
         seed: 1234
         # -- largest cluster size the memory is large enough to process. If the cluster size is larger than it, we will devide the cluster into small clusters and process each one separately.
         largest_cluster_size_to_process: 10000000
-        eps: 3.0
+        eps: 0.1
         eps_list: [
             0.00001, 0.00002, 0.00005, 0.0001, 0.0002, 0.0005, 0.001, 
             0.002, 0.005, 0.01, 0.02, 0.03, 0.04, 0.05, 
