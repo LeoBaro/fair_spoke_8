@@ -8,22 +8,22 @@ from pathlib import Path
 from made.config import Config
 from made.bin.cli import cli
 from made.data_pipeline.utils import connect_or_start_ray, collect_tar_files, save_uids, cleanup
-from made.data_pipeline.pipeline import ActorGroupPipeline
+from made.data_pipeline.actor_group import ActorGroupPipeline
 
 
-def make_pipeline(config_path: str | Path):
+# def make_pipeline(config_path: str | Path):
 
-    actor_group_pipeline = ActorGroupPipeline()
+#     actor_group_pipeline = ActorGroupPipeline()
 
-    actor_group_pipeline.add_pipeline_step("intersection")
-    actor_group_pipeline.add_actor_group(0, "UnimodalTextFilter", 2, config_path)
-    actor_group_pipeline.add_actor_group(0, "UnimodalVisionFilter", 1, config_path)
+#     actor_group_pipeline.add_pipeline_step("intersection")
+#     actor_group_pipeline.add_actor_group(0, "UnimodalTextFilter", 2, config_path)
+#     actor_group_pipeline.add_actor_group(0, "UnimodalVisionFilter", 1, config_path)
 
 
-    actor_group_pipeline.add_pipeline_step("union")
-    actor_group_pipeline.add_actor_group(1, "MultimodalFilter", 1, config_path)
+#     actor_group_pipeline.add_pipeline_step("union")
+#     actor_group_pipeline.add_actor_group(1, "MultimodalFilter", 1, config_path)
 
-    return actor_group_pipeline
+#     return actor_group_pipeline
 
 def main(args):
     config = Config(args.config_path)
@@ -36,7 +36,7 @@ def main(args):
 
     logger.info("Configuration:\n %s", config)
     
-    made_pipeline = make_pipeline(args.config_path)
+    actor_group = ActorGroup("UnimodalTextFilter", 2, args.config_path, args.log_folder, args.output_folder)
 
     s = time()
     good_uids = made_pipeline.execute(

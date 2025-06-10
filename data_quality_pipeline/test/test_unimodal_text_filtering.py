@@ -11,8 +11,9 @@ from made.data_pipeline.steps.unimodal_text_filtering import (
 )
 from made.config import Config
 from made.data_pipeline.metrics.metrics_store import MetricsStore
+from made.data_pipeline.steps.base import FilteringResult
 
-def test_unimodal_text_filtering(tar_files, log_folder, config):
+def test_unimodal_text_filtering(tar_files, log_folder, webdataset_output_folder, config):
     language_detection_model = fasttext.load_model(
         str(MADE_PATH / config.unimodal_text.lang_detection_model_path)
         )
@@ -27,25 +28,30 @@ def test_unimodal_text_filtering(tar_files, log_folder, config):
     ) as file:
         common_pos_patterns = [line.strip() for line in file.readlines()]
     
-    results = unimodal_text_filtering(
+    metrics_store = MetricsStore(log_folder)
+    filtering_result = FilteringResult(webdataset_output_folder, config.infrastructure.dump_tar_every_n_samples)
+
+    produced_tar_files = unimodal_text_filtering(
+        tar_files,
         language_detection_model,
         tagging_model, 
         common_pos_patterns,
-        tar_files, 
-        log_folder,
-        config)
-    
-    assert len(results) == 40
+        config,
+        metrics_store,
+        filtering_result
+    )
+    assert len(produced_tar_files) == 1
 
-def test_ray_unimodal_text_filtering(ray_init, ray_flag, tar_files, log_folder, config_path):
+def test_ray_unimodal_text_filtering(ray_init, ray_flag, tar_files, log_folder, webdataset_output_folder, config_path):
     if not ray_flag:
         pytest.skip("Skipping Ray test because --ray flag was not provided.")    
     
-    unimodalTextFilter = UnimodalTextFilter.remote(config_path)
+    unimodalTextFilter = UnimodalTextFilter.remote(config_path, log_folder, webdataset_output_folder)
 
     results = ray.get(
         [
-            unimodalTextFilter.execute.remote(tar_files, log_folder)
+            unimodalTextFilter.execute.remote(tar_files)
         ]
     )
-    assert len(results[0]) == 40
+    produced_tar_files = results[0]
+    assert len(produced_tar_files) == 1

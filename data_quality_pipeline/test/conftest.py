@@ -23,6 +23,13 @@ def log_folder():
     return log_folder
 
 @pytest.fixture(scope="session")
+def webdataset_output_folder():
+    webdataset_output_folder = Path(__file__).parent / "webdataset_output" / datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    webdataset_output_folder.mkdir(parents=True, exist_ok=True)
+    return webdataset_output_folder
+
+
+@pytest.fixture(scope="session")
 def tar_files(data_path):
     return sorted([str(data_path/s) for s in Path(data_path).glob("*.tar")])
 
@@ -73,10 +80,11 @@ def config_path(request):
         f.write("""
 infrastructure:
     enable_metrics: true
-    save_filtered_uids: false
+    save_bad_uids: false
     logging_level: DEBUG
     apply_filters: true
     log_to_driver: true
+    dump_tar_every_n_samples: 1000
 
 unimodal_text:
     num_workers: 1
