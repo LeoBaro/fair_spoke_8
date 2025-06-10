@@ -120,8 +120,8 @@ unimodal:
         emd_size: 512
         # -- Clustering parameters
         clustering:
-            num_clusters: 50 #50000
-            niter: 100
+            num_clusters: 500 #50000
+            niter: 1000
             keep_hard: True # True for hard examples
             sim_metric: 'cosine' # choose form ['cosine', 'l2']
             Kmeans_with_cos_dist: True # True for using cosine similarity for kmeans clustering
