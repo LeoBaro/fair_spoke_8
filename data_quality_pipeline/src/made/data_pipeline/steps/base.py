@@ -6,9 +6,12 @@ from pathlib import Path
 import torch
 from PIL import Image
 import numpy as np
+import logging
+
 class FilteringBlock(ABC):
 
     def __init__(self):
+        self.logger = logging.getLogger("ray")
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         if self.device == "cpu":
             raise ValueError("Filtering block is not supported on CPU")

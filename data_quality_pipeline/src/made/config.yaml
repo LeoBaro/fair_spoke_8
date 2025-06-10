@@ -1,11 +1,13 @@
 infrastructure:
-  num_workers: 8 
   enable_metrics: true
   save_filtered_uids: false
   logging_level: DEBUG
+  log_to_driver: true
   apply_filters: true
+  
 
-unimodal:
+unimodal_text:
+  num_workers: 1
   batch_size: 4000
 
   caption_min_words: 2
@@ -17,6 +19,10 @@ unimodal:
 
   tagging_model_name: en_core_web_trf
   good_captions_pos_distribution_path: models/common_pos_patterns.txt
+
+unimodal_vision:
+  num_workers: 1 
+  batch_size: 500
 
   image_min_aspect_ratio: 0.8
   image_max_aspect_ratio: 3.0
@@ -81,7 +87,9 @@ unimodal:
   curvature: 1.0    
 
 multimodal:
+  num_workers: 1 
   batch_size: 256
+
   dfn_model: leobaro/DFN-public
   dfn_percentile_to_drop: 25
   clip_caption_max_length: 77

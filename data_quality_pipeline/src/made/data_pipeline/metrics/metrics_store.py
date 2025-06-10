@@ -4,6 +4,7 @@ from pathlib import Path
 from datetime import datetime
 from typing import Dict, Optional
 from collections import defaultdict
+import logging
 
 from made.data_pipeline.common import Singleton
 import ray
@@ -11,6 +12,7 @@ import ray
 class MetricsStore(metaclass=Singleton):
 
     def __init__(self):
+        self.logger = logging.getLogger("ray")
         self.filter_metrics = defaultdict(list)
         self.worker_id = ray.get_runtime_context().get_worker_id() if ray.is_initialized() else "local"
 
