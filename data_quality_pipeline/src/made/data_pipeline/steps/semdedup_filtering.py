@@ -33,10 +33,10 @@ class SemDeDupFilter(FilteringBlock):
     def __init__(self, config_path: Path):
         self.config = Config(config_path)
         self.model = CLIPModel.from_pretrained(
-            self.config.unimodal.semdedup.clip_model
+            self.config.semdedup.clip_model
         )
         self.image_processor = CLIPImageProcessor.from_pretrained(
-            self.config.unimodal.semdedup.clip_model
+            self.config.semdedup.clip_model
         )
 
     def execute(
@@ -84,7 +84,7 @@ def semdedup_filtering(
         tar_files,
         get_images=True,
         get_captions=False,
-        batch_size=config.unimodal.semdedup.batch_size,
+        batch_size=config.semdedup.batch_size,
         valid_uids=uids
     )
 
@@ -97,13 +97,13 @@ def semdedup_filtering(
 
     try:
         dataset_size = get_dataset_size(dataset)
-        config.unimodal.semdedup.dataset_size = dataset_size
+        config.semdedup.dataset_size = dataset_size
 
-        paths_str_type = config.unimodal.semdedup.paths_str_type
-        embed_float_type = config.unimodal.semdedup.embed_float_type
-        emb_memory_loc = config.unimodal.semdedup.embs_memory_loc
-        paths_memory_loc = config.unimodal.semdedup.path_memory_loc
-        emb_size = config.unimodal.semdedup.emd_size
+        paths_str_type = config.semdedup.paths_str_type
+        embed_float_type = config.semdedup.embed_float_type
+        emb_memory_loc = config.semdedup.embs_memory_loc
+        paths_memory_loc = config.semdedup.path_memory_loc
+        emb_size = config.semdedup.emd_size
 
         os.makedirs(os.path.dirname(emb_memory_loc), exist_ok=True)
         os.makedirs(os.path.dirname(paths_memory_loc), exist_ok=True)
@@ -126,7 +126,7 @@ def semdedup_filtering(
         logger.error(f"Error in initialization and model loading: {e}", exc_info=True)
         return
     logger.info("--- Stage 1: Computing Embeddings ---")
-    batch_size = config.unimodal.semdedup.batch_size
+    batch_size = config.semdedup.batch_size
     dummy_filter_mask = [1] * batch_size
 
     while True:
@@ -146,7 +146,7 @@ def semdedup_filtering(
         filter_fn_parameters = {
             "model": model,
             "image_processor": image_processor,
-            "batch_size": config.unimodal.semdedup.batch_size,
+            "batch_size": config.semdedup.batch_size,
             "valid_uids": uids
         }
 
@@ -257,19 +257,19 @@ def _get_semdedup_filter_mask(
         stage_start_time = time.time()
 
         emb_memory = np.memmap(
-            config.unimodal.semdedup.embs_memory_loc,
-            dtype=config.unimodal.semdedup.embed_float_type,
+            config.semdedup.embs_memory_loc,
+            dtype=config.semdedup.embed_float_type,
             mode='r',
             shape=(dataset_size, emb_size)
         )
 
         compute_centroids(
             data = emb_memory,
-            ncentroids = config.unimodal.semdedup.clustering.num_clusters,
-            niter = config.unimodal.semdedup.clustering.niter,   
-            seed = config.unimodal.semdedup.seed,
-            Kmeans_with_cos_dist = config.unimodal.semdedup.clustering.Kmeans_with_cos_dist,
-            save_folder = config.unimodal.semdedup.clustering.save_folder,
+            ncentroids = config.semdedup.clustering.num_clusters,
+            niter = config.semdedup.clustering.niter,   
+            seed = config.semdedup.seed,
+            Kmeans_with_cos_dist = config.semdedup.clustering.Kmeans_with_cos_dist,
+            save_folder = config.semdedup.clustering.save_folder,
             logger = logger,
             verbose = True
         )
@@ -289,8 +289,8 @@ def _get_semdedup_filter_mask(
         stage_start_time = time.time()
 
         paths_memory = np.memmap(
-            config.unimodal.semdedup.path_memory_loc,
-            dtype=config.unimodal.semdedup.paths_str_type,
+            config.semdedup.path_memory_loc,
+            dtype=config.semdedup.paths_str_type,
             mode='r',
             shape=(dataset_size,)
         )
@@ -300,12 +300,12 @@ def _get_semdedup_filter_mask(
         assign_and_sort_clusters(
             data = emb_memory,
             uids_list = paths_memory,
-            sim_metric = config.unimodal.semdedup.clustering.sim_metric,
-            keep_hard = config.unimodal.semdedup.clustering.keep_hard,
-            kmeans_with_cos_dist = config.unimodal.semdedup.clustering.Kmeans_with_cos_dist,
-            save_folder = config.unimodal.semdedup.clustering.save_folder,
-            sorted_clusters_file_loc = config.unimodal.semdedup.sorted_clusters_path,
-            cluster_ids = range(0, config.unimodal.semdedup.clustering.num_clusters),
+            sim_metric = config.semdedup.clustering.sim_metric,
+            keep_hard = config.semdedup.clustering.keep_hard,
+            kmeans_with_cos_dist = config.semdedup.clustering.Kmeans_with_cos_dist,
+            save_folder = config.semdedup.clustering.save_folder,
+            sorted_clusters_file_loc = config.semdedup.sorted_clusters_path,
+            cluster_ids = range(0, config.semdedup.clustering.num_clusters),
             logger=logger
         )
         del emb_memory, paths_memory
@@ -338,11 +338,11 @@ def _get_semdedup_filter_mask(
         stage_start_time = time.time()
 
         all_good_uids = extract_pruned_data(
-            config.unimodal.semdedup.sorted_clusters_path,
-            config.unimodal.semdedup.semdedup_pruning_tables_path,
-            config.unimodal.semdedup.eps,
-            config.unimodal.semdedup.clustering.num_clusters,
-            config.unimodal.semdedup.output_txt_path,
+            config.semdedup.sorted_clusters_path,
+            config.semdedup.semdedup_pruning_tables_path,
+            config.semdedup.eps,
+            config.semdedup.clustering.num_clusters,
+            config.semdedup.output_txt_path,
             retreive_kept_samples = getattr(config, 'retreive_kept_samples', True)
         )
 
@@ -371,9 +371,9 @@ def _get_semdedup_filter_mask(
     return mask
 
 def _validate_configuration(config: Config):
-    if config.unimodal.semdedup.batch_size < 1:
+    if config.semdedup.batch_size < 1:
         raise ValueError("Batch size must be at least 1")
-    if config.unimodal.semdedup.clustering.num_clusters < 1:
+    if config.semdedup.clustering.num_clusters < 1:
         raise ValueError("Number of clusters must be at least 1")
-    if config.unimodal.semdedup.clustering.niter < 1:
+    if config.semdedup.clustering.niter < 1:
         raise ValueError("Number of iterations must be at least 1")

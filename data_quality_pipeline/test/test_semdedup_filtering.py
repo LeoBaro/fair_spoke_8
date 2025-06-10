@@ -13,10 +13,10 @@ from made.data_pipeline.metrics.metrics_store import MetricsStore
 
 def test_semdedup_filtering(tar_files, log_folder, config):
     model = CLIPModel.from_pretrained(
-        config.unimodal.semdedup.model_name
+        config.semdedup.model_name
     )
     image_processor = CLIPImageProcessor.from_pretrained(
-        config.unimodal.semdedup.model_name
+        config.semdedup.model_name
     )
     results = semdedup_filtering(
         model,

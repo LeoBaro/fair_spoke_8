@@ -109,7 +109,7 @@ def process_shard(shard: int, config=None):
         
     # print("SemDeDup params: ", config)
     start_time = time.time()
-    end_shard = config.unimodal.semdedup.clustering.num_clusters
+    end_shard = config.semdedup.clustering.num_clusters
     print(f"This process will process clusters {shard} to {end_shard}")
 
     # For a single-node run, process the entire shard without task-level division.
@@ -118,9 +118,9 @@ def process_shard(shard: int, config=None):
     print(f"Processing clusters from {start} to {end}")
 
     embs = init_memmap_embs(
-        config.unimodal.semdedup.embs_memory_loc, 
-        config.unimodal.semdedup.dataset_size,
-        config.unimodal.semdedup.emd_size
+        config.semdedup.embs_memory_loc, 
+        config.semdedup.dataset_size,
+        config.semdedup.emd_size
     )
     statistics_df = pd.DataFrame(
         columns=[
@@ -139,19 +139,19 @@ def process_shard(shard: int, config=None):
         eps: pd.DataFrame(
             columns=["duplicates_ratio", "num_duplicates", "cluster_id"]
         )
-        for eps in config.unimodal.semdedup.eps_list
+        for eps in config.semdedup.eps_list
     }
 
     eps_dict_file_loc = os.path.join(
-        config.unimodal.semdedup.save_folder, f"statistics/dicts/shard_{start}.pt"
+        config.semdedup.save_folder, f"statistics/dicts/shard_{start}.pt"
     )
     statistics_df_file_loc = os.path.join(
-        config.unimodal.semdedup.save_folder, f"statistics/dataframes/shard_{start}.pkl"
+        config.semdedup.save_folder, f"statistics/dataframes/shard_{start}.pkl"
     )
 
     os.makedirs(os.path.dirname(
         os.path.join(
-            config.unimodal.semdedup.save_folder, f"statistics/dicts/"
+            config.semdedup.save_folder, f"statistics/dicts/"
             )
         ), 
         exist_ok=True
@@ -160,7 +160,7 @@ def process_shard(shard: int, config=None):
 
     os.makedirs(os.path.dirname(
         os.path.join(
-            config.unimodal.semdedup.save_folder, f"statistics/dataframes/"
+            config.semdedup.save_folder, f"statistics/dataframes/"
             )
         ), 
         exist_ok=True
@@ -174,7 +174,7 @@ def process_shard(shard: int, config=None):
 
         os.makedirs(os.path.dirname(
             os.path.join(
-                config.unimodal.semdedup.save_folder, f"dataframes/"
+                config.semdedup.save_folder, f"dataframes/"
                 )
             ), 
             exist_ok=True
@@ -182,7 +182,7 @@ def process_shard(shard: int, config=None):
         
 
         df_file_loc = os.path.join(
-            config.unimodal.semdedup.save_folder, f"dataframes/cluster_{cluster_id}.pkl"
+            config.semdedup.save_folder, f"dataframes/cluster_{cluster_id}.pkl"
         )
 
         if os.path.exists(df_file_loc):
@@ -192,7 +192,7 @@ def process_shard(shard: int, config=None):
         # Load cluster representations.
         cluster_i = np.load(
             os.path.join(
-                config.unimodal.semdedup.sorted_clusters_path, f"cluster_{cluster_id}.npy"
+                config.semdedup.sorted_clusters_path, f"cluster_{cluster_id}.npy"
             )
         )
         cluster_size = cluster_i.shape[0]
@@ -206,9 +206,9 @@ def process_shard(shard: int, config=None):
                 :, IMAGE_ID_IN_CLUSTER_INDEX
                 ]
             points_to_remove_df["cluster_uids"] = cluster_i[:, IMAGE_UID_INDEX]
-            for eps in config.unimodal.semdedup.eps_list:
+            for eps in config.semdedup.eps_list:
                 points_to_remove_df[f"eps={eps}"] = [False]
-            if config.unimodal.semdedup.save_folder != "":
+            if config.semdedup.save_folder != "":
                 df_dir = os.path.dirname(df_file_loc)
                 os.makedirs(df_dir, exist_ok=True)
                 with open(df_file_loc, "wb") as file:
@@ -218,10 +218,10 @@ def process_shard(shard: int, config=None):
 
         # Decide which cluster examples to keep.
         clutser_items_indices = list(range(cluster_size))
-        if config.unimodal.semdedup.which_to_keep.lower() == "random":
+        if config.semdedup.which_to_keep.lower() == "random":
             random.shuffle(clutser_items_indices)
             cluster_i = cluster_i[clutser_items_indices]
-        elif config.unimodal.semdedup.which_to_keep.lower() == "easy":
+        elif config.semdedup.which_to_keep.lower() == "easy":
             clutser_items_indices = clutser_items_indices[::-1]
             cluster_i = cluster_i[clutser_items_indices]
 
@@ -243,7 +243,7 @@ def process_shard(shard: int, config=None):
 
         # Process cluster in smaller chunks if needed.
         num_small_clusters = (
-            math.ceil(cluster_size / config.unimodal.semdedup.largest_cluster_size_to_process) + 1
+            math.ceil(cluster_size / config.semdedup.largest_cluster_size_to_process) + 1
         )
         cluster_part_ids = np.linspace(
             0, cluster_size, num_small_clusters, dtype="int64"
@@ -282,7 +282,7 @@ def process_shard(shard: int, config=None):
         points_to_remove_df["image_id_in_dataset"] = cluster_ids
         points_to_remove_df["cluster_uids"] = cluster_uids
 
-        for eps in config.unimodal.semdedup.eps_list:
+        for eps in config.semdedup.eps_list:
             eps_points_to_remove = M > 1 - eps
             points_to_remove_df[f"eps={eps}"] = eps_points_to_remove
 
@@ -321,7 +321,7 @@ def process_shard(shard: int, config=None):
             ]
         )
 
-        if config.unimodal.semdedup.save_folder != "":
+        if config.semdedup.save_folder != "":
             with open(df_file_loc, "wb") as file:
                 pickle.dump(points_to_remove_df, file)
 
@@ -329,7 +329,7 @@ def process_shard(shard: int, config=None):
         print("Step time so far:", step_time)
         print("DONE cluster:", cluster_id)
 
-    if config.unimodal.semdedup.save_folder != "":
+    if config.semdedup.save_folder != "":
         eps_dir = os.path.dirname(eps_dict_file_loc)
         os.makedirs(eps_dir, exist_ok=True)
         torch.save(eps_df_dicts, eps_dict_file_loc)
