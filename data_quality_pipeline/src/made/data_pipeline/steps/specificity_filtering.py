@@ -81,7 +81,7 @@ def specificity_filtering(
     batch_id = 0
     dataset_iter = iter(dataset)
 
-    while batch_id < 2:
+    while True:
         batch = get_next_batch(dataset_iter)
         if batch is None:
             break
