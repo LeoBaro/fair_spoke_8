@@ -41,17 +41,19 @@ class FilteringResult:
 
     def dump_to_disk(self, force: bool = False):
         if len(self.uids) > self.dump_every_n_samples or force:
-            self.dump_samples()
+            start_time = time.time()
+            number_of_samples = self.dump_samples()
             self.dump_uids()
             self.reset_data()
             self.dump_counter += 1
-            self.logger.info("Dumped %d samples to webdataset", len(self.uids))
+            self.logger.info("Dumped %d samples to webdataset took %0.2f seconds. Number of tar files produced: %d", number_of_samples, time.time() - start_time, self.dump_counter)
             return True
         return False
 
     def dump_samples(self):
         tar_path = self.dump_tar()
         self.produced_tar_files.append(tar_path)
+        return len(self.uids)
 
     def dump_uids(self):
         uids_path = self.output_folder / f"{self.worker_id}_uids.txt"
@@ -62,7 +64,6 @@ class FilteringResult:
     def dump_tar(self):
         self.output_folder.mkdir(parents=True, exist_ok=True)
         tar_path = self.output_folder / f"{self.worker_id}_{self.dump_counter:08d}.tar"
-        start_time = time.time()
         with tarfile.open(tar_path, "w") as tar:
             for idx, (uid, caption, image) in enumerate(zip(self.uids, self.captions, self.images)):
                 base_name = f"{idx:08d}"
@@ -84,7 +85,6 @@ class FilteringResult:
                 json_info = tarfile.TarInfo(name=f"{base_name}.json")
                 json_info.size = len(json_data)
                 tar.addfile(json_info, io.BytesIO(json_data))
-        self.logger.info("Dumped %d samples to webdataset took %0.2f seconds", len(self.uids), time.time() - start_time)
         return tar_path
 
 
