@@ -1,85 +1,84 @@
-from pathlib import Path
-import logging  
+import time
 import json
+import logging  
+from pathlib import Path
+from itertools import compress
+from collections import defaultdict
+
 import ray
 import easyocr
 import numpy as np
-from numpy.typing import NDArray
 from PIL import Image
-from itertools import chain, compress
-from datetime import datetime
-from collections import defaultdict
-import time
+from numpy.typing import NDArray
 
 from made.config import Config
 from made.data_pipeline.metrics.metrics_store import MetricsStore
-from made.data_pipeline.steps.base import execute_filter, FilteringBlock
+from made.data_pipeline.steps.base import execute_filter, FilteringBlock, FilteringResult
 from made.data_pipeline.data.datacomp_handler import decode_webdataset, get_next_batch
 
-@ray.remote(num_gpus=0.1)
+@ray.remote(num_gpus=0.1, max_concurrency=1)
 class UnimodalVisionFilter(FilteringBlock):
-    def __init__(self, config_path: Path):
-        super().__init__()
-        self.config = Config(config_path)
-        self.reader = easyocr.Reader(['en'], gpu=True, user_network_directory=self.config.unimodal_vision.text_detection_model_path)
-        self.logger.info("Initializing UnimodalVisionFilter on %s", self.device)
 
-    def execute(self, tar_files: list[str | Path], log_folder: Path, uids: list[str] = None):
-        _ = MetricsStore()
+    def __init__(self, config_path: Path, log_folder: Path, webdataset_output_folder: Path):
+        super().__init__(config_path, log_folder, webdataset_output_folder)
+        self.logger.info("Initializing UnimodalVisionFilter on %s", self.device)
+        self.logger.info("Number of workers: %s", self.config.infrastructure.num_workers)
+        self.logger.info("Batch size: %s", self.config.infrastructure.batch_size)
+        self.logger.info("Log folder: %s", self.log_folder)
+        self.logger.info("Output folder: %s", self.filtering_result.output_folder)
+        self.reader = easyocr.Reader(['en'], gpu=True, user_network_directory=self.config.unimodal_vision.text_detection_model_path)
+
+    def execute(self, tar_files: list[str | Path]):
         return unimodal_vision_filtering(
-            self.reader,
             tar_files, 
-            log_folder, 
-            self.config, 
-            uids
+            self.reader,
+            self.config,
+            self.metrics_store,
+            self.filtering_result
         )
 
 
 def unimodal_vision_filtering(
-        text_detection_model: easyocr.Reader,
         tar_files: list[str | Path], 
-        log_folder: Path, 
-        config: Config, 
-        uids: list[str] = None
+        text_detection_model: easyocr.Reader,
+        config: Config,
+        metrics_store: MetricsStore,
+        filtering_result: FilteringResult
     ):
     logger = logging.getLogger("ray")
 
-    # logger.info("Validating configuration")
     _validate_configuration(config)    
     
-    # logger.info("Decoding webdataset")
     dataset = decode_webdataset(
         tar_files,
         get_images=True,
-        get_captions=False,
-        batch_size=config.unimodal_vision.batch_size,
-        valid_uids=uids
+        get_captions=True,
+        batch_size=config.infrastructure.batch_size
     )   
     
-    # logger.info("Iterating over dataset")
-    all_good_uids = []
-    filtered_uids_by_filter = defaultdict(list)
-
     sample_count = 0
     batch_id = 0
     dataset_iter = iter(dataset)
 
     logger.info("Starting unimodal vision filtering")
     start_time = time.time()
+
     while True:
+        batch_start_time = time.time()
+
         batch = get_next_batch(dataset_iter)
         if batch is None:
             break
 
         batch_id += 1
         sample_count += len(batch[0])
-        # logger.info(f"Next batch {batch_id} / {sample_count}")
 
         # ------------------------------------------------------------------------ 
         # first step: filter by aspect ratio
         good_uids = batch[0]
         good_images = batch[1]
-        
+        good_captions = batch[2]
+
         filter_fn_parameters = {
             "image_min_aspect_ratio": config.unimodal_vision.image_min_aspect_ratio,
             "image_max_aspect_ratio": config.unimodal_vision.image_max_aspect_ratio,
@@ -92,21 +91,20 @@ def unimodal_vision_filtering(
             parameters = filter_fn_parameters
         )
         if config.infrastructure.enable_metrics:
-            MetricsStore().add_filter_metric(
+            metrics_store.add_filter_metric(
                 "_get_images_by_aspect_ratio_filter_mask",
-                batch_id,
                 len(good_images),
                 int(sum(aspect_ratio_filter_mask)),
                 elapsed_time,
                 filter_fn_parameters,
                 ["image_min_aspect_ratio", "image_max_aspect_ratio", "image_min_dimension"]
             )
-        if config.infrastructure.save_filtered_uids:
-            bad_uids = list(compress(good_uids, [not m for m in aspect_ratio_filter_mask]))
-            filtered_uids_by_filter["aspect_ratio"].extend(bad_uids)
+        if config.infrastructure.save_bad_uids:
+            metrics_store.dump_bad_uids("aspect_ratio", list(compress(good_uids, [not m for m in aspect_ratio_filter_mask])))
 
         good_uids = list(compress(good_uids, [m for m in aspect_ratio_filter_mask]))
         good_images = list(compress(good_images, [m for m in aspect_ratio_filter_mask]))
+        good_captions = list(compress(good_captions, [m for m in aspect_ratio_filter_mask]))
 
         # ------------------------------------------- 
         # second step: remove images containing text
@@ -122,41 +120,39 @@ def unimodal_vision_filtering(
             parameters = filter_fn_parameters
         )
         if config.infrastructure.enable_metrics:
-            MetricsStore().add_filter_metric(
+            metrics_store.add_filter_metric(
                 "_get_images_by_text_filter_mask",
-                batch_id,
                 len(good_images),
                 int(sum(text_filter_mask)),
                 elapsed_time,
                 filter_fn_parameters,
                 ["model", "text_thresh", "mag_ratio"]
             )
-        if config.infrastructure.save_filtered_uids:
-            bad_uids = list(compress(good_uids, [not m for m in text_filter_mask]))
-            filtered_uids_by_filter["text_detection"].extend(bad_uids)
+        if config.infrastructure.save_bad_uids:
+            metrics_store.dump_bad_uids("text_detection", list(compress(good_uids, [not m for m in text_filter_mask])))
 
-        good_uids = list(compress(good_uids, [m for m in text_filter_mask]))
-        good_images = list(compress(good_images, [m for m in text_filter_mask]))
+        filtering_result.add_samples(
+            list(compress(good_uids, [m for m in text_filter_mask])), 
+            list(compress(good_captions, [m for m in text_filter_mask])), 
+            list(compress(good_images, [m for m in text_filter_mask]))
+        )
 
-        all_good_uids.append(good_uids)
+        filtering_result.dump_to_disk()
+
+        batch_elapsed_time = time.time() - batch_start_time    
+        logger.info("Batch %s processed in %0.2f seconds", batch_id, batch_elapsed_time)
 
 
-    all_good_uids = list(chain.from_iterable(all_good_uids))
+    filtering_result.dump_to_disk(force=True)
 
     elapsed_time = time.time() - start_time
     logger.info("Total samples processed: %s in %0.2f seconds", sample_count, elapsed_time)    
 
     if config.infrastructure.enable_metrics:
-        MetricsStore().save_to_file(log_folder)
+        metrics_store.save_to_file()
 
-    if config.infrastructure.save_filtered_uids:
-        worker_id = ray.get_runtime_context().get_worker_id() if ray.is_initialized() else "local"
-        filtered_uids_path = log_folder / f"bad_uids_unimodal_vision_filtering_{worker_id}.json"
-        with open(filtered_uids_path, 'w', encoding="utf-8") as f:
-            json.dump(filtered_uids_by_filter, f, indent=2)
-        logger.info("Filtered UIDs saved to %s", filtered_uids_path)
-
-    return all_good_uids
+    return filtering_result.produced_tar_files, filtering_result.produced_uids_files
+    
 
 
 def _get_images_by_aspect_ratio_filter_mask(

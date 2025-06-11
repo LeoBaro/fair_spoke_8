@@ -9,25 +9,41 @@ from made.data_pipeline.steps.unimodal_vision_filtering import (
 from made.config import Config
 from made.data_pipeline.metrics.metrics_store import MetricsStore
 import easyocr
+from made.data_pipeline.steps.base import FilteringResult
 
-def test_unimodal_vision_filtering(tar_files, log_folder, config):
+def test_unimodal_vision_filtering(tar_files, log_folder, webdataset_output_folder, config):
     
     text_detection_model = easyocr.Reader(['en'], gpu=True, user_network_directory=config.unimodal_vision.text_detection_model_path)
 
-    results = unimodal_vision_filtering(text_detection_model, tar_files, log_folder, config)
-    # assert len(results) == 800
+    metrics_store = MetricsStore(log_folder)
+    filtering_result = FilteringResult(webdataset_output_folder, config.infrastructure.dump_tar_every_n_samples)
 
-def test_ray_unimodal_vision_filtering(ray_init, ray_flag, tar_files, log_folder, config_path):
+    produced_tar_files, produced_uids_files = unimodal_vision_filtering(
+        tar_files,
+        text_detection_model,
+        config,
+        metrics_store,
+        filtering_result
+    )
+    assert len(produced_tar_files) == 1
+    assert len(produced_uids_files) == 1
+    assert produced_tar_files[0].exists()
+    assert produced_uids_files[0].exists()
+
+def test_ray_unimodal_vision_filtering(ray_init, ray_flag, tar_files, log_folder, webdataset_output_folder, config_path):
     if not ray_flag:
         pytest.skip("Skipping Ray test because --ray flag was not provided.")
     
-    unimodalVisionFilter = UnimodalVisionFilter.remote(config_path)
+    unimodalVisionFilter = UnimodalVisionFilter.remote(config_path, log_folder, webdataset_output_folder)
 
     # single worker test 
     results = ray.get(
         [
-            unimodalVisionFilter.execute.remote(tar_files, log_folder)
+            unimodalVisionFilter.execute.remote(tar_files)
         ]
     )
-
-    assert len(results[0]) == 800
+    produced_tar_files, produced_uids_files = results[0]
+    assert len(produced_tar_files) == 1
+    assert len(produced_uids_files) == 1
+    assert produced_tar_files[0].exists()
+    assert produced_uids_files[0].exists()

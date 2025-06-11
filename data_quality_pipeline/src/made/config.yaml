@@ -1,6 +1,6 @@
 infrastructure:
   enable_metrics: true
-  save_filtered_uids: false
+  save_bad_uids: false
   logging_level: DEBUG
   log_to_driver: true
   apply_filters: true

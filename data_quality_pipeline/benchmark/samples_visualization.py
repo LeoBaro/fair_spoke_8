@@ -2,7 +2,7 @@ import argparse
 import glob
 import os
 import numpy as np
-import json
+import random
 from pathlib import Path
 import warnings
 warnings.filterwarnings("ignore", message="Glyph.*missing from font.*")
@@ -12,6 +12,7 @@ import seaborn as sns
 import math
 from made.data_pipeline.utils import collect_tar_files
 from made.data_pipeline.data.datacomp_handler import decode_webdataset, get_next_batch
+from collections import defaultdict
 
 def get_good_uids(results_folder):
     good_uids = glob.glob(os.path.join(results_folder, "*.npy"))
@@ -19,26 +20,38 @@ def get_good_uids(results_folder):
     good_uids = [f"{a:016x}{b:016x}" for a, b in good_uids]
     return good_uids
 
-def get_bad_uids(bad_uids_file: str):
-    bad_uids = json.load(open(bad_uids_file, encoding="utf-8"))
-    return bad_uids
-
-def extract_samples_from_tar_files(uids: list[str], tar_files: list[str], batch_size: int = 500, num_samples: int = 20):
+def extract_samples_from_tar_files(
+        uids: list[str], 
+        tar_files: list[str], 
+        num_samples: int = 20,
+        batch_size: int = 5000, 
+        get_images: bool = True,
+        get_captions: bool = True,
+    ):
+    assert num_samples <= batch_size, "num_samples must be less than or equal to batch_size"
     dataset = decode_webdataset(
         tar_files,
-        get_images=True,
-        get_captions=True,
+        get_images=get_images,
+        get_captions=get_captions,
         batch_size=batch_size,
         valid_uids=uids
-    )   
-    uids, images, captions = get_next_batch(iter(dataset)) 
-    sample_idx = np.random.choice(len(images), num_samples, replace=False)
-    images = [images[i] for i in sample_idx]
-    captions = [captions[i] for i in sample_idx]
+    )
+    uids, images, captions = [], [], []
+    if get_images and get_captions:
+        uids, images, captions = get_next_batch(iter(dataset)) 
+    elif get_images:
+        uids, images = get_next_batch(iter(dataset)) 
+    elif get_captions:
+        uids, captions = get_next_batch(iter(dataset)) 
+    sample_idx = np.random.choice(len(uids), num_samples, replace=False)
+    if get_images:
+        images = [images[i] for i in sample_idx]
+    if get_captions:
+        captions = [captions[i] for i in sample_idx]
     uids = [uids[i] for i in sample_idx]
     return uids, images, captions
 
-def create_samples_visualization(uids: list[str], images: list[np.ndarray], captions: list[str], title: str, output_dir: str):
+def create_samples_visualization(uids: list[str], images: list[np.ndarray], captions: list[str], title: str, output_dir: Path):
     sns.set_theme(style="darkgrid")
 
     assert len(uids) == len(images) == len(captions), "Input lists must be of equal length"
@@ -65,36 +78,57 @@ def create_samples_visualization(uids: list[str], images: list[np.ndarray], capt
             ax.axis("off")  # Hide any unused subplot axes
 
     plt.tight_layout(rect=[0, 0.03, 1, 0.95])  # Leave space for suptitle
-    output_dir = Path(output_dir)
-    output_dir.mkdir(parents=True, exist_ok=True)
     filepath = output_dir / f"{title.replace(' ', '_')}.png"
     plt.savefig(filepath)
     plt.close()
     print(f"Visualization saved to {filepath}")
 
-
+def create_txt_file_list(uids: list[str], captions: list[str], output_file: str):
+    print("UIDS length: ", len(uids))
+    print("Captions length: ", len(captions))
+    assert len(uids) == len(captions), "UIDS and Captions must have the same length"
+    
+    with open(output_file, "w", encoding="utf-8") as f:
+        for uid, caption in zip(uids, captions):
+            f.write(f"{uid} {caption}\n")
+    print(f"Visualization saved to {output_file}")
 
 def cli():
     parser = argparse.ArgumentParser()
-    parser.add_argument("-r", "--results-folder", type=str, required=True)
+    parser.add_argument("-f", "--folder", type=str, required=True)
     parser.add_argument("-t", "--tar-files-path", type=str, required=False, default="/home/leobaro/workspace/labs/fair_spoke_8/data_quality_pipeline/benchmark/data")
+    parser.add_argument("-n", "--num-samples", type=int, required=False, default=20)
     return parser.parse_args()
 
-
 def main(args):
-    results_folder = glob.glob(os.path.join(args.results_folder, "results__*"))[0] # take the first one
     tar_files = collect_tar_files(args.tar_files_path, recursive=False)
 
-    bad_uids = glob.glob(os.path.join(results_folder, "bad_uids_*.json"))
-    for bad_uid in bad_uids:
-        bad_uid_json = get_bad_uids(bad_uid)
-        for filter_name, bad_uids_samples in bad_uid_json.items():
-            uids, images, captions = extract_samples_from_tar_files(bad_uids_samples, tar_files)
-            create_samples_visualization(uids, images, captions, f"Bad uids for {filter_name} filter", Path(results_folder) / "bad_uids_visualizations" )
+    bad_uids = glob.glob(os.path.join(args.folder, "baduids_*.txt"))
 
-    good_uids = get_good_uids(results_folder)
-    uids, images, captions = extract_samples_from_tar_files(good_uids, tar_files)
-    create_samples_visualization(uids, images, captions, f"Good uids", Path(results_folder) / "good_uids_visualizations" )
+    filter_names = set([Path(f).stem.split("_")[1] for f in bad_uids])
+
+    bad_uids_per_filter = defaultdict(list)
+    for filter_name in filter_names:
+        files = glob.glob(os.path.join(args.folder, f"baduids_{filter_name}*.txt"))
+        for file in files:
+            with open(file, "r", encoding="utf-8") as f:
+                bad_uids_per_filter[filter_name].extend(f.read().splitlines())
+
+
+    output_dir = Path(Path(args.folder) / "bad_uids_visualizations")
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    for filter_name, bad_uids_samples in bad_uids_per_filter.items():
+        uids, images, captions = extract_samples_from_tar_files(bad_uids_samples, tar_files, get_images=False, get_captions=True, num_samples=500)
+        create_txt_file_list(uids, captions, Path(args.folder) / "bad_uids_visualizations" / f"{filter_name}.txt")
+        
+        uids, images, captions = extract_samples_from_tar_files(bad_uids_samples, tar_files, get_images=True, get_captions=True, num_samples=20)
+        create_samples_visualization(uids, images, captions, f"Bad uids for {filter_name} filter", output_dir )
+
+
+    # good_uids = get_good_uids(results_folder)
+    # uids, images, captions = extract_samples_from_tar_files(good_uids, tar_files)
+    # create_samples_visualization(uids, images, captions, f"Good uids", Path(results_folder) / "good_uids_visualizations" )
 
 
 
