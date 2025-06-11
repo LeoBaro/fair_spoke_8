@@ -21,7 +21,7 @@ def test_multimodal_filtering(tar_files, log_folder, webdataset_output_folder, c
     metrics_store = MetricsStore(log_folder)
     filtering_result = FilteringResult(webdataset_output_folder, config.infrastructure.dump_tar_every_n_samples)
 
-    produced_tar_files = multimodal_filtering(
+    produced_tar_files, produced_uids_files = multimodal_filtering(
         tar_files,
         model,
         processor,
@@ -30,6 +30,9 @@ def test_multimodal_filtering(tar_files, log_folder, webdataset_output_folder, c
         filtering_result
     )
     assert len(produced_tar_files) == 1
+    assert len(produced_uids_files) == 1
+    assert produced_tar_files[0].exists()
+    assert produced_uids_files[0].exists()
 
 def test_ray_multimodal_filtering(ray_init, ray_flag, tar_files, log_folder, webdataset_output_folder, config_path):
     if not ray_flag:
@@ -42,5 +45,8 @@ def test_ray_multimodal_filtering(ray_init, ray_flag, tar_files, log_folder, web
             multimodalFilter.execute.remote(tar_files)
         ]
     )
-    produced_tar_files = results[0]
+    produced_tar_files, produced_uids_files = results[0]
     assert len(produced_tar_files) == 1
+    assert len(produced_uids_files) == 1
+    assert produced_tar_files[0].exists()
+    assert produced_uids_files[0].exists()

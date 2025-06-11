@@ -9,9 +9,14 @@ def test_actor_group(config_path, log_folder, webdataset_output_folder, tar_file
     assert ray.get_actor("UnimodalTextFilter_1") is not None
 
     actor_group.run(tar_files)
-    results = actor_group.get_results()
-    assert len(results) == 2
-    
+    tar_paths, uids_paths = actor_group.get_results()
+    assert len(tar_paths) == 2
+    assert len(uids_paths) == 2
+    for tar_path in tar_paths:
+        assert ".tar" in tar_path.name
+    for uids_path in uids_paths:
+        assert ".txt" in uids_path.name
+        
     actor_group.kill_actors()
     with pytest.raises(Exception):
         ray.get_actor("UnimodalTextFilter_0")

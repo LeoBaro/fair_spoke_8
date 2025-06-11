@@ -27,6 +27,7 @@ class FilteringResult:
         self.images = []
         self.dump_counter = 0
         self.produced_tar_files = []
+        self.produced_uids_files = []
 
     def add_samples(self, uids: list[str], captions: list[str], images: list[Image.Image]):
         assert len(uids) == len(captions) == len(images), "All input lists must be of equal length"
@@ -42,7 +43,8 @@ class FilteringResult:
     def dump_to_disk(self, force: bool = False):
         if len(self.uids) > self.dump_every_n_samples or force:
             start_time = time.time()
-            number_of_samples = self.dump_samples()
+            number_of_samples = len(self.uids)
+            self.dump_tar()
             self.dump_uids()
             self.reset_data()
             self.dump_counter += 1
@@ -50,17 +52,13 @@ class FilteringResult:
             return True
         return False
 
-    def dump_samples(self):
-        tar_path = self.dump_tar()
-        self.produced_tar_files.append(tar_path)
-        return len(self.uids)
-
     def dump_uids(self):
         uids_path = self.output_folder / f"{self.worker_id}_uids.txt"
         with open(uids_path, "a", encoding="utf-8") as f:
             for uid in self.uids:
                 f.write(uid + "\n")
-
+        self.produced_uids_files.append(uids_path)
+    
     def dump_tar(self):
         self.output_folder.mkdir(parents=True, exist_ok=True)
         tar_path = self.output_folder / f"{self.worker_id}_{self.dump_counter:08d}.tar"
@@ -85,7 +83,7 @@ class FilteringResult:
                 json_info = tarfile.TarInfo(name=f"{base_name}.json")
                 json_info.size = len(json_data)
                 tar.addfile(json_info, io.BytesIO(json_data))
-        return tar_path
+        self.produced_tar_files.append(tar_path)
 
 
 class FilteringBlock(ABC):

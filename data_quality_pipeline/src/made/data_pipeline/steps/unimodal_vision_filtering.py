@@ -151,7 +151,7 @@ def unimodal_vision_filtering(
     if config.infrastructure.enable_metrics:
         metrics_store.save_to_file()
 
-    return filtering_result.produced_tar_files
+    return filtering_result.produced_tar_files, filtering_result.produced_uids_files
     
 
 

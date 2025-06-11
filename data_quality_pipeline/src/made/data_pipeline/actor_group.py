@@ -22,7 +22,8 @@ class ActorGroup:
             .options(name=f"{actor_type}_{i}")
             .remote(config_path, log_folder, output_folder) for i in range(num_workers)]
         self.futures = None
-        self.results = None
+        self.tar_paths = []
+        self.uids_paths = []
         self.actor_type = actor_type
         self.num_workers = num_workers
 
@@ -33,10 +34,13 @@ class ActorGroup:
             actor.execute.remote(tar_split) for actor, tar_split in zip(self.actors, tar_splits)
         ]
 
-    def get_results(self) -> list[str]:
+    def get_results(self) -> tuple[list[str], list[str]]:
         results = ray.get(self.futures)
-        self.results = [element for sublist in results for element in sublist]
-        return self.results
+        for result in results:
+            tar_paths_per_actor, uids_paths_per_actor = result
+            self.tar_paths.extend(tar_paths_per_actor)
+            self.uids_paths.extend(uids_paths_per_actor)
+        return self.tar_paths, self.uids_paths
 
     def kill_actors(self):
         for actor in self.actors:

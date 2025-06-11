@@ -18,7 +18,7 @@ def test_unimodal_vision_filtering(tar_files, log_folder, webdataset_output_fold
     metrics_store = MetricsStore(log_folder)
     filtering_result = FilteringResult(webdataset_output_folder, config.infrastructure.dump_tar_every_n_samples)
 
-    produced_tar_files = unimodal_vision_filtering(
+    produced_tar_files, produced_uids_files = unimodal_vision_filtering(
         tar_files,
         text_detection_model,
         config,
@@ -26,6 +26,9 @@ def test_unimodal_vision_filtering(tar_files, log_folder, webdataset_output_fold
         filtering_result
     )
     assert len(produced_tar_files) == 1
+    assert len(produced_uids_files) == 1
+    assert produced_tar_files[0].exists()
+    assert produced_uids_files[0].exists()
 
 def test_ray_unimodal_vision_filtering(ray_init, ray_flag, tar_files, log_folder, webdataset_output_folder, config_path):
     if not ray_flag:
@@ -39,5 +42,8 @@ def test_ray_unimodal_vision_filtering(ray_init, ray_flag, tar_files, log_folder
             unimodalVisionFilter.execute.remote(tar_files)
         ]
     )
-    produced_tar_files = results[0]
+    produced_tar_files, produced_uids_files = results[0]
     assert len(produced_tar_files) == 1
+    assert len(produced_uids_files) == 1
+    assert produced_tar_files[0].exists()
+    assert produced_uids_files[0].exists()

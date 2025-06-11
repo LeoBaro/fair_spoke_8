@@ -98,3 +98,4 @@ def save_uids(uids: list[str], output_folder: str | Path):
     processed_uids = np.array([(int(uid[:16], 16), int(uid[16:32], 16)) for uid in uids], np.dtype("u8,u8"))
     processed_uids.sort()
     np.save(out_filename, processed_uids)
+    return out_filename
