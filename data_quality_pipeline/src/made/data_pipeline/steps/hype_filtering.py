@@ -17,35 +17,39 @@ from data_quality_pipeline.src.made.data_pipeline.data.datacomp_handler import d
 from data_quality_pipeline.src.made.data_pipeline.model_hype import model_init
 
 @ray.remote(num_gpus=1)
-class SpecificityFilter(FilteringBlock):
+class HypeFilter(FilteringBlock):
     def __init__(self, config_path: Path):
         self.config = Config(config_path)
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        if self.device == "cpu":
+            raise ValueError("Specificity filtering is not supported on cpu")
 
-        # Load reference embeddings
+        # Load meru reference embeddings
         ref_path = "/davinci-1/work/fdimatteo/hype_weights/reference.pt"
         ref = torch.load(ref_path)
         self.img_ref = ref["img"].to(self.device)
         self.txt_ref = ref["txt"].to(self.device)
 
-        # Load model
-        self.model_weights = "/archive/SSD/home/fdimatteo/Progetti/fair_spoke_8/meru/hype/ckpt.pt"
-        self.model, self.trs = model_init(pretrained=self.model_weights)
-        self.model = self.model.to(self.device).eval()
+        # Load meru model
+        self.meru_model_weights = "/archive/SSD/home/fdimatteo/Progetti/fair_spoke_8/meru/hype/ckpt.pt"
+        self.meru_model, self.trs = model_init(pretrained=self.meru_model_weights)
+        self.meru_model = self.meru_model.to(self.device).eval()
+
+        # Load clip model
+        self.clip_model = CLIPModel.from_pretrained(self.config.multimodal.clip_model).to(device)
+        self.processor = CLIPProcessor.from_pretrained(self.config.multimodal.clip_model)
 
     def execute(self, tar_files: list[str | Path], log_folder: Path, hype_score = False, get_specificities = False):
         _ = MetricsStore()  # Metrics tracking if enabled
 
 
-        print("CUDA available inside Ray actor:", torch.cuda.is_available())
-        print("CUDA device count:", torch.cuda.device_count())
-        print("CUDA current device:", torch.cuda.current_device())
-
-        return specificity_filtering(
+        return hype_filtering(
             tar_files,
             log_folder,
             self.config,
-            self.model,
+            self.meru_model,
+            self.clip_model,
+            self.processor,
             self.device,
             self.trs,
             self.img_ref,
@@ -54,11 +58,13 @@ class SpecificityFilter(FilteringBlock):
         )
 
 
-def specificity_filtering(
+def hype_filtering(
         tar_files: list[str | Path],
         log_folder: Path,
         config: Config,
-        model: nn.Module,
+        meru_model: nn.Module,
+        clip_model: nn.Module,
+        processor,
         device: torch.device,
         trs,
         img_ref: torch.Tensor,
@@ -95,8 +101,8 @@ def specificity_filtering(
         batch_images = torch.stack([trs(im).to(device) for im in batch[0]])
 
         with torch.no_grad():
-            images_features = model.encode_image(batch_images)
-            text_features = model.encode_text(batch_text)
+            images_features = meru_model.encode_image(batch_images)
+            text_features = meru_model.encode_text(batch_text)
 
         # Apply specificity/hype filtering
 
@@ -107,7 +113,7 @@ def specificity_filtering(
             samples=images_features,
             apply_filters=config.infrastructure.apply_filters,
             parameters={
-                "specificity_threshold": config.specificity.hype_threshold,
+                "hype_threshold": config.specificity.hype_threshold,
                 "curvature": torch.tensor(config.specificity.curvature, dtype=torch.float32, device=device),
                 "img_ref": img_ref,
                 "txt_ref": txt_ref,
@@ -138,7 +144,8 @@ def _get_images_by_hype_filter_mask(
         """
         specifities = specificity(image=images, curv=curvature, img_ref=img_ref, txt_ref=txt_ref)
         meru_sim = similarity(images, captions, curv=curvature)
-        hype = specifities  + meru_sim
+        clip_score =
+        hype = specifities  + meru_sim + clip_score
 
         if get_specificities:
             return ((specifities > specificity_threshold).tolist(), specifities)

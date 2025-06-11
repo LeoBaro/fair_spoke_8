@@ -21,6 +21,8 @@ class SpecificityFilter(FilteringBlock):
     def __init__(self, config_path: Path):
         self.config = Config(config_path)
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        if self.device == "cpu":
+            raise ValueError("Specificity filtering is not supported on cpu")
 
         # Load reference embeddings
         ref_path = "/davinci-1/work/fdimatteo/hype_weights/reference.pt"
@@ -36,10 +38,6 @@ class SpecificityFilter(FilteringBlock):
     def execute(self, tar_files: list[str | Path], log_folder: Path, get_specificities = False):
         _ = MetricsStore()  # Metrics tracking if enabled
 
-
-        print("CUDA available inside Ray actor:", torch.cuda.is_available())
-        print("CUDA device count:", torch.cuda.device_count())
-        print("CUDA current device:", torch.cuda.current_device())
 
         return specificity_filtering(
             tar_files,
@@ -63,7 +61,7 @@ def specificity_filtering(
         trs,
         img_ref: torch.Tensor,
         txt_ref: torch.Tensor,
-        get_specificities = False,
+        get_specificities = True,
 ):
     logger = logging.getLogger("ray")
 
@@ -83,16 +81,22 @@ def specificity_filtering(
     batch_id = 0
     dataset_iter = iter(dataset)
 
-    while True:
+    while batch_id < 2:
         batch = get_next_batch(dataset_iter)
         if batch is None:
             break
 
         batch_id += 1
-        sample_count += len(batch[0])
+        sample_count += len(batch[1])
 
         # Convert batch images to tensors, move them to device and encode them
-        batch_images = torch.stack([trs(im).to(device) for im in batch[0]])
+        processed_images = [trs(im.convert("RGB")).to(device) for im in batch[1] if isinstance(im, Image.Image)]
+
+        if not processed_images:
+            print(f"Warning: batch {batch_id} contains no valid images after filtering. Skipping.")
+            continue
+
+        batch_images = torch.stack(processed_images)
 
         with torch.no_grad():
             images_features = model.encode_image(batch_images)
@@ -101,7 +105,7 @@ def specificity_filtering(
         ok_uids, ok_samples, uids_filtered, samples_filtered = apply_filtering_step(
             filter_name=_get_images_by_specificity_filter_mask,
             batch_id=batch_id,
-            uids=batch[1],
+            uids=batch[0],
             samples=images_features,
             apply_filters=config.infrastructure.apply_filters,
             parameters={
