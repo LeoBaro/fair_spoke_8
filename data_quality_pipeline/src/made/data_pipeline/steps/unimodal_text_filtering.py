@@ -1,76 +1,73 @@
-from pathlib import Path
-import ray
-import logging
-import fasttext
-import spacy
-import json 
-from itertools import chain, compress
-from collections import defaultdict
 import time
+import logging
+from pathlib import Path
+from itertools import compress
+from collections import defaultdict
+
+import ray
+import spacy
+import fasttext
 
 from made.config import Config
 from made.paths import MADE_PATH
 from made.data_pipeline.metrics.metrics_store import MetricsStore
-from made.data_pipeline.steps.base import execute_filter, FilteringBlock
+from made.data_pipeline.steps.base import execute_filter, FilteringBlock, FilteringResult
 from made.data_pipeline.data.datacomp_handler import decode_webdataset, get_next_batch
 
-@ray.remote(num_gpus=0.1)
+@ray.remote(num_gpus=0.1, max_concurrency=1)
 class UnimodalTextFilter(FilteringBlock):
 
-    def __init__(self, config_path: Path):
-        super().__init__()
-        self.config = Config(config_path)
+    def __init__(self, config_path: Path, log_folder: Path, output_folder: Path):
+        super().__init__(config_path, log_folder, output_folder)
         self.logger.info("Initializing UnimodalTextFilter on %s", self.device)
+        self.logger.info("Number of workers: %s", self.config.infrastructure.num_workers)
+        self.logger.info("Batch size: %s", self.config.infrastructure.batch_size)
+        self.logger.info("Log folder: %s", self.log_folder)
+        self.logger.info("Output folder: %s", self.filtering_result.output_folder)
+
         self.language_detection_model = fasttext.load_model(
             str(MADE_PATH / self.config.unimodal_text.lang_detection_model_path)
             )
+        spacy.require_gpu()        
         self.tagging_model = spacy.load(self.config.unimodal_text.tagging_model_name)
         with open(
             str(MADE_PATH / self.config.unimodal_text.good_captions_pos_distribution_path),
             'r'
             ) as file:
             self.common_pos_patterns = [line.strip() for line in file.readlines()]
-    
-    def execute(self, tar_files: list[str | Path], log_folder: Path, uids: list[str] = None):
-        _ = MetricsStore()
+
+    def execute(self, tar_files: list[str | Path]):
         return unimodal_text_filtering(
+            tar_files, 
             self.language_detection_model,
             self.tagging_model,
             self.common_pos_patterns,
-            tar_files, 
-            log_folder, 
             self.config,
-            uids
+            self.metrics_store,
+            self.filtering_result
         )
 
 
 def unimodal_text_filtering(
+        tar_files: list[str | Path],
         language_detection_model,
         pos_tagging_model,
         pos_distribution,
-        tar_files: list[str | Path], 
-        log_folder: Path, 
         config: Config,
-        uids: list[str] = None
+        metrics_store: MetricsStore,
+        filtering_result: FilteringResult
     ):
     
     logger = logging.getLogger("ray")
 
-    # logger.info("Validating configuration")
     _validate_configuration(config)
     
-    # logger.info("Decoding webdataset")
     dataset = decode_webdataset(
         tar_files,
-        get_images=False,
+        get_images=True,
         get_captions=True,
-        batch_size=config.unimodal_text.batch_size,
-        valid_uids=uids
+        batch_size=config.infrastructure.batch_size
     )   
-
-    # logger.info("Iterating over dataset")
-    all_good_uids = []
-    filtered_uids_by_filter = defaultdict(list)
 
     sample_count = 0
     batch_id = 0
@@ -78,7 +75,10 @@ def unimodal_text_filtering(
 
     logger.info("Starting unimodal text filtering")
     start_time = time.time()
+
     while True:
+        batch_start_time = time.time()
+        
         batch = get_next_batch(dataset_iter)
         if batch is None:
             break
@@ -87,11 +87,11 @@ def unimodal_text_filtering(
         sample_count += len(batch[0])
         # logger.info(f"Next batch {batch_id} / {sample_count}")
 
-
         # ------------------------------------------- 
         # first step: filter by caption length
         good_uids = batch[0]
-        good_captions = batch[1]
+        good_images = batch[1]
+        good_captions = batch[2]
 
         filter_fn_parameters = {
             "min_words": config.unimodal_text.caption_min_words,
@@ -99,26 +99,25 @@ def unimodal_text_filtering(
         }
         length_filter_mask, elapsed_time = execute_filter(
             filter_name=_get_filter_captions_by_length_mask,
-            captions=batch[1],
+            captions=good_captions,
             images=None,
             parameters = filter_fn_parameters
         )
         if config.infrastructure.enable_metrics:
-            MetricsStore().add_filter_metric(
+            metrics_store.add_filter_metric(
                 "_get_filter_captions_by_length_mask",
-                batch_id,
                 len(good_captions),
                 int(sum(length_filter_mask)),
                 elapsed_time,
                 filter_fn_parameters,
                 ["min_words", "min_chars"]
             )
-        if config.infrastructure.save_filtered_uids:
-            bad_uids = list(compress(good_uids, [not m for m in length_filter_mask]))
-            filtered_uids_by_filter["length"].extend(bad_uids)
+        if config.infrastructure.save_bad_uids:
+            metrics_store.dump_bad_uids("length", list(compress(good_uids, [not m for m in length_filter_mask])))
 
         good_uids = list(compress(good_uids, [m for m in length_filter_mask]))
         good_captions = list(compress(good_captions, [m for m in length_filter_mask]))
+        good_images = list(compress(good_images, [m for m in length_filter_mask]))
 
         # ------------------------------------------- 
         # second step: filter by language
@@ -135,21 +134,21 @@ def unimodal_text_filtering(
             parameters = filter_fn_parameters
         )
         if config.infrastructure.enable_metrics:
-            MetricsStore().add_filter_metric(
+            metrics_store.add_filter_metric(
                 "_get_filter_captions_by_language_mask",
-                batch_id,
                 len(good_captions),
                 int(sum(lang_filter_mask)),
                 elapsed_time,
                 filter_fn_parameters,
                 ["model", "target_language", "threshold"]
             )
-        if config.infrastructure.save_filtered_uids:
-            bad_uids = list(compress(good_uids, [not m for m in lang_filter_mask]))
-            filtered_uids_by_filter["language"].extend(bad_uids)
+        if config.infrastructure.save_bad_uids:
+            metrics_store.dump_bad_uids("language", list(compress(good_uids, [not m for m in lang_filter_mask])))
+
 
         good_uids = list(compress(good_uids, [m for m in lang_filter_mask]))
         good_captions = list(compress(good_captions, [m for m in lang_filter_mask]))
+        good_images = list(compress(good_images, [m for m in lang_filter_mask]))
 
         # ------------------------------------------- 
         # third step: pos tags filtering
@@ -164,45 +163,38 @@ def unimodal_text_filtering(
             parameters = filter_fn_parameters
         )
         if config.infrastructure.enable_metrics:
-            MetricsStore().add_filter_metric(
+            metrics_store.add_filter_metric(
                 "_get_filter_captions_by_pos_tags_mask",
-                batch_id,
                 len(good_captions),
                 int(sum(pos_filter_mask)),
                 elapsed_time,
                 filter_fn_parameters,
                 ["model"]
             )
-        if config.infrastructure.save_filtered_uids:
-            bad_uids = list(compress(good_uids, [not m for m in pos_filter_mask]))
-            filtered_uids_by_filter["pos_tags"].extend(bad_uids)
+        if config.infrastructure.save_bad_uids:
+            metrics_store.dump_bad_uids("pos_tags", list(compress(good_uids, [not m for m in pos_filter_mask])))
 
-        good_uids = list(compress(good_uids, [m for m in pos_filter_mask]))
+        filtering_result.add_samples(
+            list(compress(good_uids, [m for m in pos_filter_mask])), 
+            list(compress(good_captions, [m for m in pos_filter_mask])), 
+            list(compress(good_images, [m for m in pos_filter_mask]))
+        )
 
-        all_good_uids.append(good_uids)
+        filtering_result.dump_to_disk()
+
+        batch_elapsed_time = time.time() - batch_start_time    
+        logger.info("Batch %s processed in %0.2f seconds", batch_id, batch_elapsed_time)
 
 
+    filtering_result.dump_to_disk(force=True)
 
-    # logger.info("Concatenating uids")
-    all_good_uids = list(chain.from_iterable(all_good_uids))
-
-    elapsed_time = time.time() - start_time
+    elapsed_time = time.time() - start_time    
     logger.info("Total samples processed: %s in %0.2f seconds", sample_count, elapsed_time)
 
     if config.infrastructure.enable_metrics:
-        MetricsStore().save_to_file(log_folder)
+        metrics_store.save_to_file()
 
-    if config.infrastructure.save_filtered_uids:
-        worker_id = ray.get_runtime_context().get_worker_id() if ray.is_initialized() else "local"
-        filtered_uids_path = log_folder / f"bad_uids_unimodal_text_filtering_{worker_id}.json"
-        with open(filtered_uids_path, 'w', encoding="utf-8") as f:
-            json.dump(filtered_uids_by_filter, f, indent=2)
-        logger.info("Filtered UIDs saved to %s", filtered_uids_path)
-
-    return all_good_uids
-
-# TODO: implement a function than clean the captions and 
-# remove extra whitespace and newlines
+    return filtering_result.produced_tar_files, filtering_result.produced_uids_files
 
 def _get_filter_captions_by_length_mask(
         captions: list[str],
@@ -264,7 +256,5 @@ def _validate_configuration(config: Config):
         raise ValueError("The language detection language must be either 'en' or 'it' or 'es'")
     if config.unimodal_text.lang_detection_score_threshold < 0.1 or config.unimodal_text.lang_detection_score_threshold > 1.0:
         raise ValueError("The language threshold must be between 0.1 and 1.0")
-    if config.unimodal_text.batch_size <= 0:
-        raise ValueError("The batch size must be greater than 0")
     if config.unimodal_text.lang_detection_model_path is None:
         raise ValueError("The fasttext model path must be provided")

@@ -5,15 +5,14 @@ def create_config(config: dict, dump_dir: Path):
     config_raw = f"""
 infrastructure:
     enable_metrics: {config["enable_metrics"]}
-    save_filtered_uids: {config["save_filtered_uids"]}
+    save_bad_uids: {config["save_bad_uids"]}
     logging_level: WARNING
-    apply_filters: true
     log_to_driver: true
+    num_workers: {config["num_workers"]} 
+    batch_size: {config["batch_size"]} 
+    dump_tar_every_n_samples: 10000
     
 unimodal_text:
-    num_workers: {config["unimodal_text_num_workers"]} 
-    batch_size: {config["text_batch_size"]} 
-
     caption_min_words: 2
     caption_min_chars: 5
 
@@ -25,9 +24,6 @@ unimodal_text:
     good_captions_pos_distribution_path: models/common_pos_patterns.txt
 
 unimodal_vision:
-    num_workers: {config["unimodal_vision_num_workers"]} 
-    batch_size: {config["vision_batch_size"]} 
-
     image_min_aspect_ratio: 0.8
     image_max_aspect_ratio: 3.0
     image_min_dimension: 50
@@ -40,8 +36,6 @@ unimodal_vision:
     curvature: 1.0    
 
 multimodal:
-    num_workers: {config["multimodal_num_workers"]} 
-    batch_size: {config["multimodal_batch_size"]}
     dfn_model: leobaro/DFN-public
     dfn_percentile_to_drop: 25
     clip_caption_max_length: 77
@@ -61,7 +55,7 @@ def create_output_folder(filtering_step_name: str):
 def create_result_file(output_folder):
     result_file = output_folder / "benchmark_results.csv"
     with open(result_file, "w", encoding="utf-8") as f:
-        f.write("unimodal_text_num_workers,unimodal_vision_num_workers,multimodal_num_workers,text_batch_size,vision_batch_size,multimodal_batch_size,iteration_index,took\n")
+        f.write("num_workers,batch_size,iteration_index,took\n")
     return result_file
 
 def create_results_and_log_folders(output_folder: Path, suffix: str = ""):

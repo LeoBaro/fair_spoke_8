@@ -11,25 +11,32 @@ import ray
 
 class MetricsStore(metaclass=Singleton):
 
-    def __init__(self):
+    def __init__(self, output_dir: Path):
         self.logger = logging.getLogger("ray")
         self.filter_metrics = defaultdict(list)
         self.worker_id = ray.get_runtime_context().get_worker_id() if ray.is_initialized() else "local"
+        self.count = 0
+        self.output_path = Path(output_dir)
+        self.output_path.mkdir(exist_ok=True, parents=True)
+
+    def dump_bad_uids(self, filter_name: str, bad_uids: list[str]):
+        with open(self.output_path / f"baduids_{filter_name.replace('_', '')}_{self.worker_id}.txt", 'a', encoding="utf-8") as f:
+            for uid in bad_uids:
+                f.write(uid + "\n")
 
     def add_filter_metric(
             self, 
             func_name: str,
-            batch_id: int,
             input_count: int,
             output_count: int,
             elapsed_time: float,
             extra_data: Optional[Dict] = None,
             extra_data_keys: Optional[list[str]] = None
         ):
-        
+        self.count += 1
         metric = {
             "worker_id": self.worker_id,
-            "batch_id": batch_id,
+            "batch_id": self.count,
             "timestamp": datetime.now().isoformat(),
             "input_count": input_count,
             "output_count": output_count,
@@ -78,21 +85,18 @@ class MetricsStore(metaclass=Singleton):
             
         return summary
     
-    def save_to_file(self, output_dir: str):
-        output_path = Path(output_dir)
-        output_path.mkdir(exist_ok=True, parents=True)
-
+    def save_to_file(self):
         # Create a timestamp-based filename
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         worker_suffix = self.worker_id.replace(":", "_")
         
         # Save summary
-        summary_path = output_path / f"metrics_summary_{worker_suffix}_{timestamp}.json"
+        summary_path = self.output_path / f"metrics_summary_{worker_suffix}_{timestamp}.json"
         with open(summary_path, 'w', encoding="utf-8") as f:
             json.dump(self.get_summary(), f, indent=2)
             
         # Save detailed metrics
-        details_path = output_path / f"metrics_details_{worker_suffix}_{timestamp}.json"
+        details_path = self.output_path / f"metrics_details_{worker_suffix}_{timestamp}.json"
         with open(details_path, 'w', encoding="utf-8") as f:
             json.dump({
                 "worker_id": self.worker_id,

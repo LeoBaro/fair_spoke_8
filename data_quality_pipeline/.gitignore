@@ -11,4 +11,7 @@ benchmark/data/*
 test/data/_*
 test/data/*[0-9].tar
 benchmark/data_test
+benchmark/data_small
+benchmark/data_large
 benchmark/out_*
+benchmark/preliminary_benchmarks/

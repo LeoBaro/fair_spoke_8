@@ -1,11 +1,18 @@
-from typing import Any
-from pathlib import Path
+import io
+import json
 import logging
+import tarfile
+from typing import List
+from pathlib import Path
+
 import ray
 import numpy as np
+from PIL import Image
+
 from made.config import Config
 from made.data_pipeline.metrics.metrics_store import MetricsStore
 from made.data_pipeline.common import Singleton
+
 
 def connect_or_start_ray(ray_address, logging_level, log_to_driver, log_folder):
     if ray_address:
@@ -91,3 +98,4 @@ def save_uids(uids: list[str], output_folder: str | Path):
     processed_uids = np.array([(int(uid[:16], 16), int(uid[16:32], 16)) for uid in uids], np.dtype("u8,u8"))
     processed_uids.sort()
     np.save(out_filename, processed_uids)
+    return out_filename

@@ -1,29 +1,10 @@
-import atexit
-import ray
 import logging
-import argparse
 from time import time
-from pathlib import Path
 
 from made.config import Config
 from made.bin.cli import cli
 from made.data_pipeline.utils import connect_or_start_ray, collect_tar_files, save_uids, cleanup
-from made.data_pipeline.pipeline import ActorGroupPipeline
-
-
-def make_pipeline(config_path: str | Path):
-
-    actor_group_pipeline = ActorGroupPipeline()
-
-    actor_group_pipeline.add_pipeline_step("intersection")
-    actor_group_pipeline.add_actor_group(0, "UnimodalTextFilter", 2, config_path)
-    actor_group_pipeline.add_actor_group(0, "UnimodalVisionFilter", 1, config_path)
-
-
-    actor_group_pipeline.add_pipeline_step("union")
-    actor_group_pipeline.add_actor_group(1, "MultimodalFilter", 1, config_path)
-
-    return actor_group_pipeline
+from made.data_pipeline.actor_group import ActorGroup
 
 def main(args):
     config = Config(args.config_path)
@@ -36,23 +17,27 @@ def main(args):
 
     logger.info("Configuration:\n %s", config)
     
-    made_pipeline = make_pipeline(args.config_path)
+    actor_group = ActorGroup("UnimodalTextFilter", 2, args.config_path, args.log_folder, args.output_folder)
 
     s = time()
-    good_uids = made_pipeline.execute(
-        collect_tar_files(args.shards_path), 
-        args.log_folder
+    actor_group.run(
+        collect_tar_files(args.shards_path),
     )
+    tar_paths, uids_paths = actor_group.get_results()
     took = time() - s
     logger.info("Pipeline completed. Took %0.2f seconds", took)
 
 
     logger.info("Saving uids to %s", args.output_folder)
-    save_uids(good_uids, args.output_folder)
+    good_uids = []
+    for uids_path in uids_paths:
+        with open(uids_path, "r", encoding="utf-8") as f:
+            good_uids.extend(f.readlines())
+    output_filename = save_uids(good_uids, args.output_folder)
 
     cleanup()
 
-    return took
+    return tar_paths, uids_paths, output_filename
 
     # TODO: After creating a subset, you may invoke the resharder to build the subset shards 
     # From: https://github.com/mlfoundations/datacomp
