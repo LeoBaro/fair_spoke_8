@@ -86,6 +86,8 @@ def specificity_filtering(
     batch_id = 0
     dataset_iter = iter(dataset)
 
+    curv = model.curvature.exp()
+
     while batch_id<3:
         batch = get_next_batch(dataset_iter)
         if batch is None:
@@ -106,7 +108,7 @@ def specificity_filtering(
         good_images = images_embeddings
         specificity_parameters = {
             "specificity_threshold": config.specificity.specificity_threshold,
-            "curvature": torch.tensor(config.specificity.curvature, dtype=torch.float32, device=device),
+            "curvature": curv,
             "img_ref": img_ref,
             "txt_ref": txt_ref,
             "get_specificities": get_specificities,
@@ -169,7 +171,6 @@ def _get_images_specificity_filter_mask(
         Filter images based on specificity.
         """
         specifities = specificity(image=images, curv=curvature, img_ref=img_ref, txt_ref=txt_ref)
-        print(specifities)
 
         if get_specificities:
             return ((specifities > specificity_threshold).tolist(), specifities)
@@ -218,7 +219,7 @@ def entailment(x, y, curvature):
 
 @torch.cuda.amp.autocast(enabled=False)
 def expm(v, curvature, time_keepdim=False):
-    v, curvature = v.float(), curvature.float()
+    v, curvature = torch.tensor(v).float(), torch.tensor(curvature).float()
     x_space_temp = torch.sqrt(curvature) * torch.norm(v, dim=-1, keepdim=True)
     x_space = (
             torch.sinh(torch.clamp(x_space_temp, min=1e-8, max=math.asinh(2 ** 15))) * v / torch.clamp(x_space_temp,
