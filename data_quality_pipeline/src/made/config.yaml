@@ -41,6 +41,6 @@ multimodal:
   clip_caption_max_length: 77
 
 specificity:
-  specificity_threshold: 1.63
+  specificity_threshold: 0.27
   curvature: 1.0
   batch_size: 32

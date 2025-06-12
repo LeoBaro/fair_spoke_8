@@ -6,13 +6,14 @@ import os
 import logging
 import numpy as np
 from pathlib import Path
-from itertools import chain
+from itertools import chain, compress
 from datetime import datetime
 from PIL import Image
+from collections import defaultdict
 
 from data_quality_pipeline.src.made.config import Config
 from data_quality_pipeline.src.made.data_pipeline.metrics.metrics_store import MetricsStore
-from data_quality_pipeline.src.made.data_pipeline.steps.base import apply_filtering_step, FilteringBlock
+from data_quality_pipeline.src.made.data_pipeline.steps.base import execute_filter, FilteringBlock
 from data_quality_pipeline.src.made.data_pipeline.data.datacomp_handler import decode_webdataset, get_next_batch
 from data_quality_pipeline.src.made.data_pipeline.model_hype import model_init
 
@@ -62,7 +63,8 @@ def specificity_filtering(
         img_ref: torch.Tensor,
         txt_ref: torch.Tensor,
         get_specificities = True,
-):
+        ):
+
     logger = logging.getLogger("ray")
 
     # Validate configuration
@@ -76,12 +78,15 @@ def specificity_filtering(
         batch_size=config.specificity.batch_size
     )
 
-    all_uids = []
+    # logger.info("Iterating over dataset")
+    all_good_uids = []
+    filtered_uids_by_filter = defaultdict(list)
+
     sample_count = 0
     batch_id = 0
     dataset_iter = iter(dataset)
 
-    while True:
+    while batch_id<3:
         batch = get_next_batch(dataset_iter)
         if batch is None:
             break
@@ -90,45 +95,69 @@ def specificity_filtering(
         sample_count += len(batch[1])
 
         # Convert batch images to tensors, move them to device and encode them
-        processed_images = [trs(im.convert("RGB")).to(device) for im in batch[1] if isinstance(im, Image.Image)]
-
-        if not processed_images:
-            print(f"Warning: batch {batch_id} contains no valid images after filtering. Skipping.")
-            continue
-
-        batch_images = torch.stack(processed_images)
+        images_tensors = torch.stack([trs(im) for im in batch[1]])
+        images_tensors = images_tensors.to(device)
 
         with torch.no_grad():
-            images_features = model.encode_image(batch_images)
+            images_embeddings = model.encode_image(images_tensors)
 
         # Apply specificity filtering
-        ok_uids, ok_samples, uids_filtered, samples_filtered = apply_filtering_step(
-            filter_name=_get_images_by_specificity_filter_mask,
-            batch_id=batch_id,
-            uids=batch[0],
-            samples=images_features,
-            apply_filters=config.infrastructure.apply_filters,
-            parameters={
-                "specificity_threshold": config.specificity.specificity_threshold,
-                "curvature": torch.tensor(config.specificity.curvature, dtype=torch.float32, device=device),
-                "img_ref": img_ref,
-                "txt_ref": txt_ref,
-                "get_specificities": get_specificities,
+        good_uids = batch[0]
+        good_images = images_embeddings
+        specificity_parameters = {
+            "specificity_threshold": config.specificity.specificity_threshold,
+            "curvature": torch.tensor(config.specificity.curvature, dtype=torch.float32, device=device),
+            "img_ref": img_ref,
+            "txt_ref": txt_ref,
+            "get_specificities": get_specificities,
             }
+
+        specificity_filter_mask, elapsed_time = execute_filter(
+            filter_name=_get_images_specificity_filter_mask,
+            captions=None,
+            images=good_images,
+            parameters = specificity_parameters
         )
 
-        all_uids.append(ok_uids)
+        if config.infrastructure.enable_metrics:
+            MetricsStore().add_filter_metric(
+                "_get_specificity_filter_mask",
+                batch_id,
+                len(batch[0]),
+                int(sum(specificity_filter_mask)),
+                elapsed_time,
+                specificity_parameters,
+                ["specificity_threshold"]
+            )
+        if config.infrastructure.save_filtered_uids:
+            bad_uids = list(compress(good_uids, [not m for m in specificity_filter_mask]))
+            filtered_uids_by_filter["specificity"].extend(bad_uids)
 
-    all_uids = list(chain.from_iterable(all_uids))
+        good_uids = list(compress(good_uids, [m for m in specificity_filter_mask]))
+        # good_images = list(compress(good_images, [m for m in specificity_filter_mask]))
+
+
+        all_good_uids.append(good_uids)
+
+
+    # logger.info("Concatenating uids")
+    all_good_uids = list(chain.from_iterable(all_good_uids))
+
     logger.info(f"[{datetime.now()}] Total samples processed: %s", sample_count)
 
     if config.infrastructure.enable_metrics:
         MetricsStore().save_to_file(log_folder)
 
-    return all_uids
+    if config.infrastructure.save_filtered_uids:
+        filtered_uids_path = log_folder / "bad_uids_multimodal_filtering.json"
+        with open(filtered_uids_path, 'w', encoding="utf-8") as f:
+            json.dump(filtered_uids_by_filter, f, indent=2)
+        logger.info("Filtered UIDs saved to %s", filtered_uids_path)
+
+    return all_good_uids
 
 
-def _get_images_by_specificity_filter_mask(
+def _get_images_specificity_filter_mask(
         images: torch.Tensor,
         specificity_threshold: float,
         curvature: float,
@@ -140,6 +169,7 @@ def _get_images_by_specificity_filter_mask(
         Filter images based on specificity.
         """
         specifities = specificity(image=images, curv=curvature, img_ref=img_ref, txt_ref=txt_ref)
+        print(specifities)
 
         if get_specificities:
             return ((specifities > specificity_threshold).tolist(), specifities)
