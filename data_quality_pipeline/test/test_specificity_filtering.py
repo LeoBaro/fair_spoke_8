@@ -1,34 +1,48 @@
 import pytest
 import ray
 import torch
-from pathlib import Path
 
-from data_quality_pipeline.src.made.config import Config
-from data_quality_pipeline.src.made.data_pipeline.steps.specificity_filtering import (
+from made.data_pipeline.steps.specificity_filtering import (
     specificity_filtering,
     SpecificityFilter
 )
+from made.data_pipeline.metrics.metrics_store import MetricsStore
+from made.data_pipeline.steps.base import FilteringResult
+from made.data_pipeline.steps.specificity_filtering import model_init
+from made.paths import MADE_PATH
 
 # ------------------------
 # Test without Ray
 # ------------------------
 
-def test_specificity_filtering(tar_files, log_folder, config):
-    ref_path = "/davinci-1/work/fdimatteo/hype_weights/reference.pt"
-    ref = torch.load(ref_path)
-    img_ref, txt_ref = ref["img"], ref["txt"]
+def test_specificity_filtering(tar_files, log_folder, webdataset_output_folder, config):
 
-    results = specificity_filtering(
+    ref = torch.load(str(MADE_PATH / config.specificity.reference_path))
+    img_ref = ref["img"].to("cuda")
+    txt_ref = ref["txt"].to("cuda")
+
+    # Load model
+    model, trs = model_init(pretrained=str(MADE_PATH / config.specificity.model_path))
+    model = model.to("cuda").eval()
+
+    metrics_store = MetricsStore(log_folder)
+    filtering_result = FilteringResult(webdataset_output_folder, config.infrastructure.dump_tar_every_n_samples)
+
+    produced_tar_files, produced_uids_files = specificity_filtering(
         tar_files=tar_files,
-        log_folder=log_folder,
-        config=config,
+        model=model,
+        trs=trs,
         img_ref=img_ref,
-        txt_ref=txt_ref
+        txt_ref=txt_ref,
+        config=config,
+        metrics_store=metrics_store,
+        filtering_result=filtering_result
     )
 
-    assert isinstance(results, list)
-    # Optional: Add expected result count or value-type check
-    # assert len(results) == expected_count
+    assert len(produced_tar_files) == 1
+    assert len(produced_uids_files) == 1
+    assert produced_tar_files[0].exists()
+    assert produced_uids_files[0].exists()
 
 
 # ------------------------

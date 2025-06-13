@@ -53,7 +53,7 @@ def unimodal_vision_filtering(
         tar_files,
         get_images=True,
         get_captions=True,
-        batch_size=config.infrastructure.batch_size
+        batch_size=config.unimodal_vision.batch_size
     )   
     
     sample_count = 0

@@ -7,7 +7,6 @@ import ray
 
 from made.config import Config
 
-
 @pytest.fixture(scope="session")
 def data_path():
     return Path(__file__).parent / "data"
@@ -84,10 +83,11 @@ infrastructure:
     logging_level: DEBUG
     log_to_driver: true
     num_workers: 1
-    batch_size: 33
     dump_tar_every_n_samples: 1000
 
 unimodal_text:
+    batch_size: 50
+
     caption_min_words: 2
     caption_min_chars: 5
 
@@ -99,6 +99,8 @@ unimodal_text:
     good_captions_pos_distribution_path: models/common_pos_patterns.txt
 
 unimodal_vision:
+    batch_size: 50
+
     image_min_aspect_ratio: 0.8
     image_max_aspect_ratio: 3.0
     image_min_dimension: 50
@@ -108,9 +110,20 @@ unimodal_vision:
     text_detection_mag_ratio: 0.5
                 
 multimodal:
+    batch_size: 500
+
     dfn_model: leobaro/DFN-public
     dfn_percentile_to_drop: 25
     clip_caption_max_length: 77
+                
+specificity:
+    batch_size: 100
+
+    model_path: models/ckpt.pt
+    reference_path: models/reference.pt
+    specificity_threshold: 0.25
+    curvature: 1.0
+                
 
 """)
     return config_file_for_tests_path

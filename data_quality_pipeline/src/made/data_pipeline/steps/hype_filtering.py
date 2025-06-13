@@ -23,23 +23,15 @@ class SpecificityFilter(FilteringBlock):
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
         # Load reference embeddings
-        ref_path = "/davinci-1/work/fdimatteo/hype_weights/reference.pt"
-        ref = torch.load(ref_path)
+        ref = torch.load(self.config.multimodal.hype_reference_path)
         self.img_ref = ref["img"].to(self.device)
         self.txt_ref = ref["txt"].to(self.device)
 
         # Load model
-        self.model_weights = "/archive/SSD/home/fdimatteo/Progetti/fair_spoke_8/meru/hype/ckpt.pt"
-        self.model, self.trs = model_init(pretrained=self.model_weights)
+        self.model, self.trs = model_init(pretrained=self.config.multimodal.hype_model_path)
         self.model = self.model.to(self.device).eval()
 
     def execute(self, tar_files: list[str | Path], log_folder: Path, hype_score = False, get_specificities = False):
-        _ = MetricsStore()  # Metrics tracking if enabled
-
-
-        print("CUDA available inside Ray actor:", torch.cuda.is_available())
-        print("CUDA device count:", torch.cuda.device_count())
-        print("CUDA current device:", torch.cuda.current_device())
 
         return specificity_filtering(
             tar_files,
@@ -137,7 +129,7 @@ def _get_images_by_hype_filter_mask(
         Filter images based on hype score.
         """
         specifities = specificity(image=images, curv=curvature, img_ref=img_ref, txt_ref=txt_ref)
-        meru_sim = similarity(images, captions, curv=curvature)
+        meru_sim = similarity(images, captions, curvature=curvature)
         hype = specifities  + meru_sim
 
         if get_specificities:
@@ -149,7 +141,7 @@ def _get_images_by_hype_filter_mask(
 def _validate_configuration(config: Config):
     ##if config.specificity_threshold < 0.0 or config.specificity_threshold > 1.0:
     # raise ValueError("The specificity threshold must be between 0.0 and 1.0")
-    if config.specificity.curvature <= 0.0:
+    if config.multimodal.hype_curvature <= 0.0:
         raise ValueError("Curvature must be a positive value")
 
 

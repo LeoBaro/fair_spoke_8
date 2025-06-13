@@ -90,9 +90,12 @@ class FilteringBlock(ABC):
 
     def __init__(self, config_path: Path, log_folder: Path, output_folder: Path):
         self.logger = logging.getLogger("ray")
-        self.device = "cuda" if torch.cuda.is_available() else "cpu"        
-        if self.device == "cpu":
+        self.device = "cuda" 
+        if not torch.cuda.is_available():        
             raise ValueError("Filtering block is not supported on CPU")
+        self.logger.info("CUDA device count: %s", torch.cuda.device_count())
+        self.logger.info("CUDA current device: %s", torch.cuda.current_device())
+
         self.config = Config(config_path)
         self.log_folder = log_folder
         self.filtering_result = FilteringResult(output_folder, self.config.infrastructure.dump_tar_every_n_samples)
@@ -103,8 +106,6 @@ class FilteringBlock(ABC):
     def execute(self, tar_files: list[str | Path]):
         pass
     
-
-
 
 def execute_filter(
         filter_name: Callable,
@@ -127,26 +128,26 @@ def execute_filter(
     elapsed_time = time.time() - start_time
     return  boolean_mask, elapsed_time
 
-def apply_filter_mask(
-        uids: list[str],
-        mask: list[bool],
-    ) -> tuple[list[str], list[str]]:
-    """
-    Apply a filter mask to items and data, returning both kept and filtered items
+# def apply_filter_mask(
+#         uids: list[str],
+#         mask: list[bool],
+#     ) -> tuple[list[str], list[str]]:
+#     """
+#     Apply a filter mask to items and data, returning both kept and filtered items
     
-    Args:
-        items: List of identifiers (e.g., UIDs)
-        mask: Boolean mask for filtering
-    Returns:
-        Tuple of (kept_items, filtered_items)
-    """
-    kept_uids = []
-    filtered_uids = []
+#     Args:
+#         items: List of identifiers (e.g., UIDs)
+#         mask: Boolean mask for filtering
+#     Returns:
+#         Tuple of (kept_items, filtered_items)
+#     """
+#     kept_uids = []
+#     filtered_uids = []
 
-    for item, m in zip(uids, mask):
-        if m:  # Keep this item
-            kept_uids.append(item)
-        else:  # Filter out this item
-            filtered_uids.append(item)
+#     for item, m in zip(uids, mask):
+#         if m:  # Keep this item
+#             kept_uids.append(item)
+#         else:  # Filter out this item
+#             filtered_uids.append(item)
 
-    return kept_uids, filtered_uids
+#     return kept_uids, filtered_uids

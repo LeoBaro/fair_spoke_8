@@ -24,7 +24,7 @@ class MultimodalFilter(FilteringBlock):
         super().__init__(config_path, log_folder, webdataset_output_folder)
         self.logger.info("Initializing MultimodalFilter on %s", self.device)
         self.logger.info("Number of workers: %s", self.config.infrastructure.num_workers)
-        self.logger.info("Batch size: %s", self.config.infrastructure.batch_size)
+        self.logger.info("Batch size: %s", self.config.multimodal.batch_size)
         self.logger.info("Log folder: %s", self.log_folder)
         self.logger.info("Output folder: %s", self.filtering_result.output_folder)
 
@@ -60,7 +60,7 @@ def multimodal_filtering(
         tar_files,
         get_images=True,
         get_captions=True,
-        batch_size=config.infrastructure.batch_size
+        batch_size=config.multimodal.batch_size
     )   
     
     sample_count = 0
@@ -148,7 +148,6 @@ def _get_dfn_score_filter_mask(
     """
     Filter the images by aspect ratio.
     """
-    device = "cuda" if torch.cuda.is_available() else "cpu"
     similarity_scores = []
 
     for img, txt in zip(images, captions):
@@ -160,7 +159,7 @@ def _get_dfn_score_filter_mask(
             padding=True,
             truncation=True,
             max_length=clip_caption_max_length
-        ).to(device)
+        ).to("cuda")
         outputs = dfn_model(**inputs)
         score = outputs.logits_per_image.item()
         similarity_scores.append(score)

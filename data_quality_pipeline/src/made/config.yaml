@@ -41,6 +41,10 @@ multimodal:
   clip_caption_max_length: 77
 
 specificity:
+  batch_size: 500
+  
+  model_path: models/ckpt.pt
+  reference_path: models/reference.pt
+  
   specificity_threshold: 0.25
   curvature: 1.0
-  batch_size: 1000

@@ -6,7 +6,6 @@ import numpy as np
 from typing import Optional, Callable
 from collections import OrderedDict
 from torchvision.transforms import Normalize, Compose, InterpolationMode, ToTensor, Resize, CenterCrop
-from huggingface_hub import PyTorchModelHubMixin
 
 
 def image_transform(image_size: int):
