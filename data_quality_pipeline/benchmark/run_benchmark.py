@@ -116,18 +116,14 @@ def cli():
     )
     parser.add_argument(
         "--enable_metrics",
-        type=bool,
         action="store_true",
         required=False,
-        default=False,
         help="Enable metrics and save filtered uids to perform quality tests"
     )
     parser.add_argument(
         "--save_bad_uids",
-        type=bool,
         action="store_true",
         required=False,
-        default=False,
         help="Save filtered uids to perform quality tests"
     )
     
