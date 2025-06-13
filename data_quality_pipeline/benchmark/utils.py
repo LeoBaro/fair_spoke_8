@@ -50,8 +50,7 @@ specificity:
 
     model_path: models/ckpt.pt
     reference_path: models/reference.pt
-    specificity_threshold: 0.25
-    curvature: 1.0
+    specificity_threshold: 0.27
 """
     
     config_file_path = dump_dir / "single_node_config.yaml"

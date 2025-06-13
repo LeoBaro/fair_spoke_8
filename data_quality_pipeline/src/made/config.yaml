@@ -47,4 +47,3 @@ specificity:
   reference_path: models/reference.pt
   
   specificity_threshold: 0.27
-  curvature: 1.0
