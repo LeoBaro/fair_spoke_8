@@ -35,7 +35,7 @@ class ActorGroup:
             actor.execute.remote(tar_split) for actor, tar_split in zip(self.actors, tar_splits)
         ]
 
-def get_results(self, timeout: float = 300.0, check_interval: float = 1.0) -> tuple[list[str], list[str]]:
+    def get_results(self, timeout: float = 300.0, check_interval: float = 1.0) -> tuple[list[str], list[str]]:
         """
         Get results from Ray workers with timeout and proper error handling.
 
