@@ -2,7 +2,7 @@ import time
 import math
 import logging
 from pathlib import Path
-from itertools import chain
+from itertools import chain, compress
 from datetime import datetime
 from itertools import compress
 
@@ -10,6 +10,7 @@ import ray
 import torch
 import torch.nn as nn
 from PIL import Image
+from collections import defaultdict
 
 from made.config import Config
 from made.data_pipeline.metrics.metrics_store import MetricsStore
@@ -89,7 +90,7 @@ def specificity_filtering(
             break
 
         batch_id += 1
-        sample_count += len(batch[0])
+        sample_count += len(batch[1])
 
         good_uids = batch[0]
         good_images = batch[1]
@@ -99,7 +100,7 @@ def specificity_filtering(
             "model": model,
             "trs": trs,
             "specificity_threshold": config.specificity.specificity_threshold,
-            "curvature": torch.tensor(config.specificity.curvature, dtype=torch.float32, device="cuda"),
+            "curvature": model.curvature.exp(),
             "img_ref": img_ref,
             "txt_ref": txt_ref
         }
@@ -162,9 +163,7 @@ def _get_images_by_specificity_filter_mask(
         """
         Filter images based on specificity.
         """
-
-        # Convert batch images to tensors, move them to device and encode them
-        images = torch.stack([trs(im.convert("RGB")).to("cuda") for im in images])
+        images = torch.stack([trs(im) for im in images]).to("cuda")
 
         with torch.no_grad():
             images = model.encode_image(images)
@@ -218,7 +217,7 @@ def entailment(x, y, curvature):
 
 @torch.cuda.amp.autocast(enabled=False)
 def expm(v, curvature, time_keepdim=False):
-    v, curvature = v.float(), curvature.float()
+    v, curvature = torch.tensor(v).float(), torch.tensor(curvature).float()
     x_space_temp = torch.sqrt(curvature) * torch.norm(v, dim=-1, keepdim=True)
     x_space = (
             torch.sinh(torch.clamp(x_space_temp, min=1e-8, max=math.asinh(2 ** 15))) * v / torch.clamp(x_space_temp,

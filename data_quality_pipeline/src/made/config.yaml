@@ -46,5 +46,5 @@ specificity:
   model_path: models/ckpt.pt
   reference_path: models/reference.pt
   
-  specificity_threshold: 0.25
+  specificity_threshold: 0.27
   curvature: 1.0
