@@ -65,7 +65,7 @@ if __name__=='__main__':
     shards_path = "/davinci-1/work/lbaroncelli/datacomp_32_tar_files"
     shards_path = "/home/leobaro/workspace/labs/fair_spoke_8/data_quality_pipeline/benchmark/data"
 
-    from made.bin.made import main
+    from made.bin.main import main
 
     output_folder = create_output_folder()
     results_file = output_folder / "benchmark_results.json"
