@@ -28,16 +28,16 @@ def main(args):
     logger.info("Pipeline completed. Took %0.2f seconds", took)
 
 
-    logger.info("Saving uids to %s", args.output_folder)
-    good_uids = []
-    for uids_path in uids_paths:
-        with open(uids_path, "r", encoding="utf-8") as f:
-            good_uids.extend(f.readlines())
-    output_filename = save_uids(good_uids, args.output_folder)
+    # logger.info("Saving uids to %s", args.output_folder)
+    # good_uids = []
+    # for uids_path in uids_paths:
+    #     with open(uids_path, "r", encoding="utf-8") as f:
+    #         good_uids.extend(f.readlines())
+    # output_filename = save_uids(good_uids, args.output_folder)
 
     cleanup()
 
-    return tar_paths, uids_paths, output_filename
+    return tar_paths, uids_paths
 
     # TODO: After creating a subset, you may invoke the resharder to build the subset shards 
     # From: https://github.com/mlfoundations/datacomp

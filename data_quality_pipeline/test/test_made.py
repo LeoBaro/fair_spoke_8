@@ -16,9 +16,10 @@ def test_ray_made_pipeline(ray_init, data_path, output_folder, log_folder, confi
         output_folder=output_folder,
         config_path=str(config_path)
     )
-    
-    tar_paths, uids_paths, output_filename = main(args)
 
-    assert output_filename.exists()
-    assert ".npy" in output_filename.name
+    tar_paths, uids_paths = main(args)
+
+    for tar_path, uids_path in zip(tar_paths, uids_paths):
+        assert tar_path.exists()
+        assert uids_path.exists()
 
