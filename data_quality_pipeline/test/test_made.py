@@ -1,7 +1,7 @@
 import pytest
 from argparse import Namespace
 
-from made.bin.made import main
+from made.bin.main import main
 
 
 def test_ray_made_pipeline(ray_init, data_path, output_folder, log_folder, config_path):
@@ -10,11 +10,12 @@ def test_ray_made_pipeline(ray_init, data_path, output_folder, log_folder, confi
     #     pytest.skip("Skipping Ray test because --ray flag was not provided.") 
     
     args = Namespace(   
+        filtering_step_name="UnimodalTextFilter",
         shards_path=data_path,
-        ray_address=None,
+        config_path=config_path,
         log_folder=log_folder,
         output_folder=output_folder,
-        config_path=str(config_path)
+        ray_address=None
     )
 
     tar_paths, uids_paths = main(args)
