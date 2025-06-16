@@ -29,7 +29,7 @@ class MultimodalAlignmentFilter(FilteringBlock):
         self.logger.info("Output folder: %s", self.filtering_result.output_folder)
 
         os.environ["TOKENIZERS_PARALLELISM"] = "false"
-        self.model = CLIPModel.from_pretrained(self.config.multimodal.dfn_model).to(self.device)
+        self.model = CLIPModel.from_pretrained(self.config.multimodal.dfn_model).eval().to(self.device)
         self.processor = CLIPProcessor.from_pretrained(self.config.multimodal.dfn_model, use_fast=False) #  use_fast=True
 
     def execute(self, tar_files: list[str | Path]):
