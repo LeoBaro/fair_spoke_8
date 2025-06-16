@@ -2,7 +2,8 @@ import os
 import yaml
 from pathlib import Path
 
-from made.data_pipeline.common import Singleton, DictWrapper
+from made.data_pipeline.common.singleton import Singleton
+from made.data_pipeline.common.dict_wrapper import DictWrapper
 
 class Config(metaclass=Singleton):
 

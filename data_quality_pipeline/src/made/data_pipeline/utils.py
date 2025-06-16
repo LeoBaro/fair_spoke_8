@@ -6,8 +6,8 @@ import ray
 import numpy as np
 
 from made.config import Config
-from made.data_pipeline.metrics.metrics_store import MetricsStore
-from made.data_pipeline.common import Singleton
+from made.data_pipeline.common.metrics_store import MetricsStore
+from made.data_pipeline.common.singleton import Singleton
 
 
 def connect_or_start_ray(ray_address, logging_level, log_to_driver, log_folder):
