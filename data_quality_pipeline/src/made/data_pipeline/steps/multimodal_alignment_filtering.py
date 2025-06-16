@@ -19,7 +19,7 @@ from made.data_pipeline.steps.base import execute_filter, FilteringBlock, Filter
 from made.data_pipeline.data.datacomp_handler import decode_webdataset, get_next_batch
 
 @ray.remote
-class MultimodalFilter(FilteringBlock):
+class MultimodalAlignmentFilter(FilteringBlock):
     def __init__(self, config_path: Path, log_folder: Path, webdataset_output_folder: Path):
         super().__init__(config_path, log_folder, webdataset_output_folder)
         self.logger.info("Initializing MultimodalFilter on %s", self.device)
@@ -33,7 +33,7 @@ class MultimodalFilter(FilteringBlock):
         self.processor = CLIPProcessor.from_pretrained(self.config.multimodal.dfn_model, use_fast=False) #  use_fast=True
 
     def execute(self, tar_files: list[str | Path]):
-        return multimodal_filtering(
+        return multimodal_alignment_filtering(
             tar_files, 
             self.model,
             self.processor,
@@ -43,7 +43,7 @@ class MultimodalFilter(FilteringBlock):
         )
 
 
-def multimodal_filtering(
+def multimodal_alignment_filtering(
         tar_files: list[str | Path],
         dfn_model,
         clip_processor,

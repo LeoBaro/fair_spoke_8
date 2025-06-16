@@ -105,7 +105,7 @@ def extract_samples_from_tar_files(
     return uids, images, captions
 
 
-def create_samples_visualization(uids: list[str], images: list[np.ndarray], captions: list[str], title: str, output_dir: Path):
+def create_samples_visualization(uids: list[str], images: list[np.ndarray], captions: list[str], title: str, output_path: Path):
     sns.set_theme(style="darkgrid")
 
     assert len(uids) == len(images) == len(captions), "Input lists must be of equal length"
@@ -132,7 +132,6 @@ def create_samples_visualization(uids: list[str], images: list[np.ndarray], capt
             ax.axis("off")  # Hide any unused subplot axes
 
     plt.tight_layout(rect=[0, 0.03, 1, 0.95])  # Leave space for suptitle
-    filepath = output_dir / f"{title.replace(' ', '_')}.png"
-    plt.savefig(filepath)
+    plt.savefig(output_path)
     plt.close()
-    print(f"Visualization saved to {filepath}")
+    print(f"Visualization saved to {output_path}")

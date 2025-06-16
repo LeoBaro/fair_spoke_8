@@ -6,7 +6,7 @@ import time
 
 from made.data_pipeline.steps.unimodal_text_filtering import UnimodalTextFilter
 from made.data_pipeline.steps.unimodal_vision_filtering import UnimodalVisionFilter 
-from made.data_pipeline.steps.multimodal_filtering import MultimodalFilter
+from made.data_pipeline.steps.multimodal_alignment_filtering import MultimodalAlignmentFilter
 from made.config import Config
 
 class ActorGroup:
