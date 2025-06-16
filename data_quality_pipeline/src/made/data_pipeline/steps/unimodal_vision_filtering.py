@@ -16,7 +16,7 @@ from made.data_pipeline.metrics.metrics_store import MetricsStore
 from made.data_pipeline.steps.base import execute_filter, FilteringBlock, FilteringResult
 from made.data_pipeline.data.datacomp_handler import decode_webdataset, get_next_batch
 
-@ray.remote(num_gpus=0.1, max_concurrency=1)
+@ray.remote
 class UnimodalVisionFilter(FilteringBlock):
 
     def __init__(self, config_path: Path, log_folder: Path, webdataset_output_folder: Path):

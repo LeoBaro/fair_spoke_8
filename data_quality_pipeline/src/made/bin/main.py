@@ -37,7 +37,6 @@ def main(args):
     
     actor_group = ActorGroup(
         args.filtering_step_name,
-        config.infrastructure.num_workers,
         args.config_path,
         args.log_folder,
         args.output_folder

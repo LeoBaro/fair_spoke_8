@@ -83,7 +83,8 @@ infrastructure:
     save_bad_uids: false
     logging_level: DEBUG
     log_to_driver: true
-    num_workers: 1
+    num_workers: 2
+    num_gpus_per_worker: 0.4
     batch_size: 33
     dump_tar_every_n_samples: 1000
 
