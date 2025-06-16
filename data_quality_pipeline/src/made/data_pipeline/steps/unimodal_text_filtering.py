@@ -183,7 +183,7 @@ def unimodal_text_filtering(
         filtering_result.dump_to_disk()
 
         batch_elapsed_time = time.time() - batch_start_time    
-        logger.info("Batch %s processed in %0.2f seconds", batch_id, batch_elapsed_time)
+        logger.debug("Batch %s processed in %0.2f seconds", batch_id, batch_elapsed_time)
 
 
     filtering_result.dump_to_disk(force=True)

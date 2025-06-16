@@ -48,7 +48,7 @@ class FilteringResult:
             self.dump_uids()
             self.reset_data()
             self.dump_counter += 1
-            self.logger.info("Dumped %d samples to webdataset took %0.2f seconds. Number of tar files produced: %d", number_of_samples, time.time() - start_time, self.dump_counter)
+            self.logger.debug("Dumped %d samples to webdataset took %0.2f seconds. Number of tar files produced: %d", number_of_samples, time.time() - start_time, self.dump_counter)
             return True
         return False
 

@@ -18,18 +18,6 @@ def cli():
     parser.add_argument("--ray-address", type=str, required=False, default=None)
     return parser.parse_args()
 
-def make_actor_group(config_path: str | Path, filtering_step_name: str, config: dict, log_folder: Path, output_folder: Path):
-    if filtering_step_name == "UnimodalTextFilter":
-        num_workers = config.infrastructure.num_workers
-    elif filtering_step_name == "UnimodalVisionFilter":
-        num_workers = config.infrastructure.num_workers
-    elif filtering_step_name == "MultimodalFilter":
-        num_workers = config.infrastructure.num_workers
-    else:
-        raise ValueError(f"Invalid filtering step name: {filtering_step_name}")
-
-    return ActorGroup(filtering_step_name, num_workers, config_path, log_folder, output_folder)
-
 def main(args):
     config = Config(args.config_path)
 
@@ -47,17 +35,17 @@ def main(args):
 
     logger.info("Configuration:\n %s", config)
     
-    actor_group = make_actor_group(
-        args.config_path, 
-        args.filtering_step_name, 
-        config, 
-        args.log_folder, 
+    actor_group = ActorGroup(
+        args.filtering_step_name,
+        config.infrastructure.num_workers,
+        args.config_path,
+        args.log_folder,
         args.output_folder
     )
 
     s = time()
     actor_group.run(
-        collect_tar_files(args.shards_path),
+        collect_tar_files(args.shards_path, recursive=True),
     )
     tar_paths, uids_paths = actor_group.get_results()
     took = time() - s

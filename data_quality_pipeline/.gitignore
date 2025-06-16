@@ -15,3 +15,5 @@ benchmark/data_small
 benchmark/data_large
 benchmark/out_*
 benchmark/preliminary_benchmarks/
+full_datacomp_unimodal_text_filter_logs/
+full_datacomp_unimodal_text_filter_output/
