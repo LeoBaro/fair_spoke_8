@@ -39,12 +39,9 @@ unimodal_vision:
     text_detection_model_path: models
     text_detection_mag_ratio: 0.5
 
-    specificity_threshold: 0.5           
-    curvature: 1.0    
-
 multimodal:
     dfn_model: leobaro/DFN-public
-    dfn_percentile_to_drop: 25
+    dfn_similarity_score_threshold: 4.8
     clip_caption_max_length: 77
 """
     

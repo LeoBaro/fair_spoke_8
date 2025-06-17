@@ -77,5 +77,5 @@ def test_filter_by_clip_similarity(test_images_path_similarity, config):
         Image.open(str(test_images_path_similarity / "000000000139.jpg")),
         Image.open(str(test_images_path_similarity / "000000000081.jpg"))
     ]
-    mask = filter_by_clip_similarity(captions, images, dfn_model, clip_processor, dfn_percentile_to_drop=25, clip_caption_max_length=77)
+    mask = filter_by_clip_similarity(captions, images, dfn_model, clip_processor, dfn_similarity_score_threshold=4, clip_caption_max_length=77)
     assert mask == [False, True]

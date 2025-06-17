@@ -91,7 +91,7 @@ unimodal_vision:
                 
 multimodal:
     dfn_model: leobaro/DFN-public
-    dfn_percentile_to_drop: 25
+    dfn_similarity_score_threshold: 4.8
     clip_caption_max_length: 77
 
 """)

@@ -8,13 +8,12 @@ def filter_by_clip_similarity(
         images: List[Image.Image],
         dfn_model,
         clip_processor,
-        dfn_percentile_to_drop: int,
+        dfn_similarity_score_threshold: int,
         clip_caption_max_length: int
     ) -> List[bool]:
     """Filter by CLIP similarity scores using percentile threshold"""
-    device = "cuda" if torch.cuda.is_available() else "cpu"
-    similarity_scores = []
 
+    similarity_scores = []
     for img, txt in zip(images, captions):
         inputs = clip_processor(
             text=[txt],
@@ -24,10 +23,9 @@ def filter_by_clip_similarity(
             padding=True,
             truncation=True,
             max_length=clip_caption_max_length
-        ).to(device)
+        ).to("cuda")
         outputs = dfn_model(**inputs)
         score = outputs.logits_per_image.item()
         similarity_scores.append(score)
     
-    threshold = np.percentile(similarity_scores, dfn_percentile_to_drop)
-    return [score > threshold for score in similarity_scores]
+    return [score > dfn_similarity_score_threshold for score in similarity_scores]
