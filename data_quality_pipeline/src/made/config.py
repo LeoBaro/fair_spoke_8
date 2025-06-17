@@ -53,6 +53,12 @@ multimodal:
     dfn_model:                         {override_config["dfn_model"] if "dfn_model" in override_config else "leobaro/DFN-public"}
     dfn_similarity_score_threshold:    {override_config["dfn_similarity_score_threshold"] if "dfn_similarity_score_threshold" in override_config else 4.8}
     clip_caption_max_length:           {override_config["clip_caption_max_length"] if "clip_caption_max_length" in override_config else 77}
+
+specificity:
+    model_path: {override_config["model_path"] if "model_path" in override_config else "models/ckpt.pt"}
+    reference_path: {override_config["reference_path"] if "reference_path" in override_config else "models/reference.pt"}
+    specificity_threshold: {override_config["specificity_threshold"] if "specificity_threshold" in override_config else 0.27}
+    weight: {override_config["weight"] if "weight" in override_config else 0.5}
 """
         with open(output_path, "w", encoding="utf-8") as f:
             f.write(config_raw)

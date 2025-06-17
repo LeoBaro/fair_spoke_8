@@ -60,6 +60,10 @@ def test_images_path_text_detection():
 def test_images_path_similarity():
     return Path(__file__).parent / "data" / "test_images" / "similarity"
 
+@pytest.fixture(scope="session")
+def test_images_path_specificity():
+    return Path(__file__).parent / "data" / "test_images" / "specificity"
+
 @pytest.fixture(scope="function")
 def ray_init():
     ray.init(

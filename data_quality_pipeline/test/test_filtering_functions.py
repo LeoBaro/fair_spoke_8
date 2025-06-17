@@ -1,13 +1,16 @@
 from made.data_pipeline.filtering_functions.text_filters import filter_captions_by_length, filter_captions_by_language, filter_captions_by_pos_tags
 from made.data_pipeline.filtering_functions.vision_filters import filter_images_by_aspect_ratio, filter_images_by_text_detection
-from made.data_pipeline.filtering_functions.multimodal_filters import filter_by_clip_similarity
+from made.data_pipeline.filtering_functions.multimodal_filters import filter_by_clip_similarity, filter_by_specificity
 from made.paths import MADE_PATH
 
+import torch
 import spacy
 import easyocr
 import fasttext
 from PIL import Image
 from transformers import CLIPModel, CLIPProcessor
+
+from made.models.meru.nn import model_init
 
 def test_filter_captions_by_length():
     captions = [
@@ -78,4 +81,37 @@ def test_filter_by_clip_similarity(test_images_path_similarity, config):
         Image.open(str(test_images_path_similarity / "000000000081.jpg"))
     ]
     mask = filter_by_clip_similarity(captions, images, dfn_model, clip_processor, dfn_similarity_score_threshold=4, clip_caption_max_length=77)
+    assert mask == [False, True]
+
+def test_filter_by_specificity(test_images_path_specificity, config):
+    ref = torch.load(
+        str(MADE_PATH / config.specificity.reference_path)
+    )
+    img_ref = ref["img"].to("cuda")
+    txt_ref = ref["txt"].to("cuda")
+
+    # Load model
+    model, trs = model_init(pretrained=str(MADE_PATH / config.specificity.model_path))
+    model = model.to("cuda").eval()
+    from transformers import CLIPTokenizer
+    tokenizer = CLIPTokenizer.from_pretrained("openai/clip-vit-base-patch32")
+
+    captions = [
+        "A sky with clouds.",
+        "Stratocumulus clouds scattered across a bright blue sky, possibly indicating the beginning or end of the day.",
+    ]
+    images = [
+        Image.open(str(test_images_path_specificity / "clouds.png"))
+    ]
+    mask = filter_by_specificity(captions, images, model, trs, tokenizer, img_ref, txt_ref, model.curvature.exp(), specificity_threshold=0.27, weight=0.5)
+    assert mask == [False, True]
+
+    captions = [
+        "A Formula 1 race car.",
+        "The McLaren MCL33, in its distinctive orange and blue livery, on a race track during the 2018 FIA Formula One World Championship, possibly at the Baku City Circuit.",
+    ]
+    images = [
+        Image.open(str(test_images_path_specificity / "f1.png"))
+    ]
+    mask = filter_by_specificity(captions, images, model, trs, tokenizer, img_ref, txt_ref, model.curvature.exp(), specificity_threshold=0.27, weight=0.5)
     assert mask == [False, True]
