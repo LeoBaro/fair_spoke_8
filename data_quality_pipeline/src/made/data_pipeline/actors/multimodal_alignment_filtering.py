@@ -27,13 +27,13 @@ class MultimodalAlignmentFilter(BaseFilteringBlock):
                 params={
                     "dfn_model": self.model,
                     "clip_processor": self.processor,
-                    "dfn_percentile_to_drop": self.config.multimodal.dfn_percentile_to_drop,
+                    "dfn_similarity_score_threshold": self.config.multimodal.dfn_similarity_score_threshold,
                     "clip_caption_max_length": self.config.multimodal.clip_caption_max_length,
                 },
-                param_keys_for_metrics=["dfn_percentile_to_drop", "clip_caption_max_length"]
+                param_keys_for_metrics=["dfn_similarity_score_threshold", "clip_caption_max_length"]
             ),
         ]
     
     def validate_configuration(self):
-        if not (0 <= self.config.multimodal.dfn_percentile_to_drop <= 100):
-            raise ValueError("The DFN percentile threshold must be between 0 and 100")
+        if not (self.config.multimodal.dfn_similarity_score_threshold > 0):
+            raise ValueError("The DFN similarity score threshold must be greater than 0")
