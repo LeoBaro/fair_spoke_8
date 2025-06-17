@@ -1,12 +1,9 @@
-import sys
-import os
+import os, sys
+import time
 
 sys.path.append(os.path.abspath(".."))
 
-import time
-from data_quality_pipeline.src.made.data_pipeline.data.datacomp_handler import decode_webdataset, decode_webdataset_two_steps, get_next_batch
-import PIL
-
+from data_quality_pipeline.src.made.data_pipeline.data.datacomp_handler import decode_webdataset, get_next_batch
 
 def benchmark_webdataset(tar_files, iterations=10):
     configs = [

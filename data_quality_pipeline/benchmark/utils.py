@@ -1,54 +1,13 @@
-from datetime import datetime
-from pathlib import Path
-import numpy as np
-from made.data_pipeline.data.datacomp_handler import decode_webdataset, get_next_batch
-import matplotlib.pyplot as plt
-import seaborn as sns
 import math
 import textwrap
+from pathlib import Path
+from datetime import datetime
 
+import numpy as np
+import matplotlib.pyplot as plt
 
-def create_config(config: dict, dump_dir: Path):
-    config_raw = f"""
-infrastructure:
-    enable_metrics: {config["enable_metrics"]}
-    save_bad_uids: {config["save_bad_uids"]}
-    logging_level: WARNING
-    log_to_driver: true
-    num_workers: {config["num_workers"]} 
-    batch_size: {config["batch_size"]} 
-    dump_tar_every_n_samples: 10000
-    
-unimodal_text:
-    caption_min_words: 2
-    caption_min_chars: 5
-
-    lang_detection_model_path: models/lid.176.bin
-    lang_detection_score_threshold: 0.7
-    lang_detection_language: en
-
-    tagging_model_name: en_core_web_trf
-    good_captions_pos_distribution_path: models/common_pos_patterns.txt
-
-unimodal_vision:
-    image_min_aspect_ratio: 0.8
-    image_max_aspect_ratio: 3.0
-    image_min_dimension: 50
-
-    text_threshold: 0.6
-    text_detection_model_path: models
-    text_detection_mag_ratio: 0.5
-
-multimodal:
-    dfn_model: leobaro/DFN-public
-    dfn_similarity_score_threshold: 4.8
-    clip_caption_max_length: 77
-"""
-    
-    config_file_path = dump_dir / "single_node_config.yaml"
-    with open(config_file_path, "w", encoding="utf-8") as f:
-        f.write(config_raw)
-    return config_file_path
+from made.data_pipeline.data.datacomp_handler import decode_webdataset, get_next_batch
+from made.data_pipeline.utils import set_plotting_configuration
 
 def create_output_folder(filtering_step_name: str):
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -103,8 +62,7 @@ def extract_samples_from_tar_files(
 
 
 def create_samples_visualization(uids: list[str], images: list[np.ndarray], captions: list[str], title: str, output_path: Path):
-    sns.set_theme(style="darkgrid")
-
+    set_plotting_configuration()
     assert len(uids) == len(images) == len(captions), "Input lists must be of equal length"
     
     num_samples = len(images)

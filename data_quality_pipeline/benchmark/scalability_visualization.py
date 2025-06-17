@@ -6,49 +6,13 @@ import pandas as pd
 import argparse
 from pathlib import Path
 
-# Set global matplotlib rcParams for scientific plots
-plt.rcParams.update({
-    # Font settings
-    'font.size': 16,                # Base font size
-    'axes.titlesize': 18,           # Title size
-    'axes.labelsize': 16,           # Axis label size
-    'xtick.labelsize': 14,          # X-tick label size
-    'ytick.labelsize': 14,          # Y-tick label size
-    'legend.fontsize': 14,          # Legend font size
-
-
-    # Figure & Axes
-    'figure.figsize': [6.4, 4.8],   # Default figure size (in inches)
-    'figure.dpi': 300,              # High resolution for reports
-    'savefig.dpi': 300,             # High resolution for saved images
-    'axes.grid': True,              # Enable grid
-    'grid.alpha': 0.3,              # Grid transparency
-    'axes.spines.top': False,       # Remove top spine
-    'axes.spines.right': False,     # Remove right spine
-
-
-    # Lines
-    'lines.linewidth': 2,           # Thicker lines
-    'lines.markersize': 6,          # Moderate marker size
-
-
-    # Legend
-    'legend.frameon': False,        # Remove legend frame
-
-
-    # Text rendering
-    'text.usetex': False,           # Set to True if using LaTeX rendering
-})
-
-
-# Optional: use tight_layout by default
-plt.rcParams['figure.autolayout'] = True
+from made.data_pipeline.utils import set_plotting_configuration
+set_plotting_configuration()
 
 def cli():
     parser = argparse.ArgumentParser()
     parser.add_argument("-f", "--benchmark-file", type=str, required=True, help="CSV file with the benchmark results")
     parser.add_argument("-t", "--title", type=str, required=True)
-
     return parser.parse_args()
 
 def main(args):
@@ -59,9 +23,6 @@ def main(args):
     summary_df = df.groupby(f"num_workers").agg({"took": ["mean", "std"], "speedup": ["mean", "std"]}).reset_index()
     summary_df.columns = ["Workers", "Mean Time (s)", "Std Dev", "Mean Speedup", "Std Dev Speedup"]
     
-
-    # Set Seaborn style
-    sns.set(style="whitegrid")
 
     fig = plt.errorbar(
         summary_df["Workers"],

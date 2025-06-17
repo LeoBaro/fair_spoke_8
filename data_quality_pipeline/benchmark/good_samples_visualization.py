@@ -1,14 +1,11 @@
-import argparse
-import glob
 import os
-import random
-import numpy as np
+import glob
+import argparse
 from pathlib import Path
-import warnings
-warnings.filterwarnings("ignore", message="Glyph.*missing from font.*")
+
 from made.data_pipeline.utils import collect_tar_files
-from utils import extract_samples_from_tar_files, create_samples_visualization
 from made.data_pipeline.data.datacomp_handler import decode_webdataset, get_next_batch
+from utils import create_samples_visualization
 
 def get_good_uids(results_folder):
     good_uids_files = glob.glob(os.path.join(results_folder, "*.txt"))

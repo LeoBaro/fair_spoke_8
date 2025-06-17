@@ -133,3 +133,34 @@ def rename_thread_files(directory_path):
             print(f"Error renaming {file_info['original_name']}: {e}")
     
     return rename_map
+
+def set_plotting_configuration():
+    import matplotlib.pyplot as plt
+    import seaborn as sns
+    sns.set_style("whitegrid")
+    sns.set_context("paper")
+
+    plt.rcParams.update({
+        'font.size': 16,                # Base font size
+        'axes.titlesize': 18,           # Title size
+        'axes.labelsize': 16,           # Axis label size
+        'xtick.labelsize': 14,          # X-tick label size
+        'ytick.labelsize': 14,          # Y-tick label size
+        'legend.fontsize': 14,          # Legend font size
+
+        'figure.figsize': [6.4, 4.8],   # Default figure size (in inches)
+        'figure.dpi': 300,              # High resolution for reports
+        'savefig.dpi': 300,             # High resolution for saved images
+        'axes.grid': True,              # Enable grid
+        'grid.alpha': 0.3,              # Grid transparency
+        'axes.spines.top': False,       # Remove top spine
+        'axes.spines.right': False,     # Remove right spine
+
+        'lines.linewidth': 2,           # Thicker lines
+        'lines.markersize': 6,          # Moderate marker size
+
+        'legend.frameon': False,        # Remove legend frame
+
+        'text.usetex': False,           # Set to True if using LaTeX rendering
+    })
+    plt.rcParams['figure.autolayout'] = True

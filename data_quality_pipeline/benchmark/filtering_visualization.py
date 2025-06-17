@@ -1,10 +1,13 @@
-import json
-
-import matplotlib.pyplot as plt
-import seaborn as sns
-import pandas as pd
 import argparse
 from pathlib import Path
+
+import pandas as pd
+import seaborn as sns
+import matplotlib.pyplot as plt
+
+from made.data_pipeline.utils import set_plotting_configuration
+set_plotting_configuration()
+
 def cli():
     parser = argparse.ArgumentParser()
     parser.add_argument("-f", "--metric-summary", type=str, required=True, help="JSON file with the metric summary")
@@ -19,8 +22,6 @@ def main(args):
     summary_df = df.groupby("num_workers").agg({"took": ["mean", "std"], "speedup": ["mean", "std"]}).reset_index()
     summary_df.columns = ["Workers", "Mean Time (s)", "Std Dev", "Mean Speedup", "Std Dev Speedup"]
     
-
-    # Set Seaborn style
     sns.set(style="whitegrid")
 
     fig = plt.errorbar(

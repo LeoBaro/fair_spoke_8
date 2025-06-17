@@ -1,8 +1,6 @@
-import os, glob
+import os, json, glob
 import argparse
-from pathlib import Path
 from collections import defaultdict
-import json
 
 def cli():
     parser = argparse.ArgumentParser()
