@@ -57,11 +57,7 @@ def filter_by_specificity(
     image_specificity_scores = _image_specificity(txt_ref=txt_ref, curv=curvature, image=encoded_images)
     text_specificity_scores = _text_specificity(img_ref=img_ref, curv=curvature, text=encoded_captions)
 
-    print("image_specificity_scores:",image_specificity_scores)
-    print("text_specificity_scores:",text_specificity_scores)
-
     image_text_specificity_score = image_specificity_scores * weight + text_specificity_scores * (1 - weight)
-    print("image_text_specificity_score:",image_text_specificity_score)
 
     return (image_text_specificity_score > specificity_threshold).tolist()
 
