@@ -6,9 +6,10 @@ import ray
 import numpy as np
 
 from made.config import Config
-from made.data_pipeline.metrics.metrics_store import MetricsStore
-from made.data_pipeline.common import Singleton
+from made.data_pipeline.common.metrics_store import MetricsStore
+from made.data_pipeline.common.singleton import Singleton
 
+""" collection of stateless utility functions """
 
 def connect_or_start_ray(ray_address, logging_level, log_to_driver, log_folder):
     if ray_address:
@@ -56,30 +57,6 @@ def shutdown_ray():
     else:
         logger.info("Ray is not initialized. Skipping shutdown")
 
-def print_execution_stats():
-    """Print execution statistics and filter metrics summaries"""
-    logger = logging.getLogger("ray")
-    summary = MetricsStore().get_summary()
-    
-    logger.info("\n===== Execution Time Statistics =====")
-    for func_name, stats in summary["execution_times"].items():
-        logger.info("%s:", func_name)
-        logger.info("  Mean = %0.4fs, StdDev = %0.4fs", stats["mean"], stats["stddev"])
-        logger.info("  Min = %0.4fs, Max = %0.4fs, Calls = %d", stats["min"], stats["max"], stats["calls"])
-    
-    logger.info("\n===== Filter Metrics Summary =====")
-    for func_name, stats in summary["filter_metrics"].items():
-        logger.info("%s:", func_name)
-        logger.info("  Total input: %d, Total output: %d", stats["total_input"], stats["total_output"])
-        logger.info("  Total filtered: %d (%0.2f%%)", stats["total_filtered"], stats["avg_filter_rate"]*100)
-        logger.info("  Batches processed: %d", stats["batches_processed"])
-    
-    # Save metrics to file
-    summary_path, details_path = MetricsStore().save_to_file(Config().infrastructure.log_folder)
-    logger.info("\nMetrics saved to:")
-    logger.info("  Summary: %s", summary_path)
-    logger.info("  Details: %s", details_path)
-
 def save_uids(uids: list[str], output_folder: str | Path):
     """
     The format describing the subset of samples should be a numpy array of dtype 
@@ -95,8 +72,6 @@ def save_uids(uids: list[str], output_folder: str | Path):
     processed_uids.sort()
     np.save(out_filename, processed_uids)
     return out_filename
-
-
 
 def rename_thread_files(directory_path):
     """
@@ -158,3 +133,33 @@ def rename_thread_files(directory_path):
             print(f"Error renaming {file_info['original_name']}: {e}")
     
     return rename_map
+
+def set_plotting_configuration():
+    import matplotlib.pyplot as plt
+    import seaborn as sns
+    sns.set_style("whitegrid")
+    sns.set_context("paper")
+
+    plt.rcParams.update({
+        'font.size': 16,                # Base font size
+        'axes.titlesize': 18,           # Title size
+        'axes.labelsize': 16,           # Axis label size
+        'xtick.labelsize': 14,          # X-tick label size
+        'ytick.labelsize': 14,          # Y-tick label size
+        'legend.fontsize': 14,          # Legend font size
+
+        'figure.figsize': [6.4, 4.8],   # Default figure size (in inches)
+        'savefig.dpi': 300,             # High resolution for saved images
+        'axes.grid': True,              # Enable grid
+        'grid.alpha': 0.3,              # Grid transparency
+        'axes.spines.top': False,       # Remove top spine
+        'axes.spines.right': False,     # Remove right spine
+
+        'lines.linewidth': 2,           # Thicker lines
+        'lines.markersize': 6,          # Moderate marker size
+
+        'legend.frameon': False,        # Remove legend frame
+
+        'text.usetex': False,           # Set to True if using LaTeX rendering
+    })
+    plt.rcParams['figure.autolayout'] = True

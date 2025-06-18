@@ -5,15 +5,9 @@ import logging
 import tarfile
 from pathlib import Path
 from datetime import datetime
-from abc import ABC, abstractmethod
-from typing import Callable, Any
 
 import ray
-import torch
 from PIL import Image
-
-from made.config import Config
-from made.data_pipeline.metrics.metrics_store import MetricsStore
 
 class FilteringResult:
 
@@ -84,69 +78,3 @@ class FilteringResult:
                 json_info.size = len(json_data)
                 tar.addfile(json_info, io.BytesIO(json_data))
         self.produced_tar_files.append(tar_path)
-
-
-class FilteringBlock(ABC):
-
-    def __init__(self, config_path: Path, log_folder: Path, output_folder: Path):
-        self.logger = logging.getLogger("ray")
-        self.device = "cuda" if torch.cuda.is_available() else "cpu"        
-        if self.device == "cpu":
-            raise ValueError("Filtering block is not supported on CPU")
-        self.config = Config(config_path)
-        self.log_folder = log_folder
-        self.filtering_result = FilteringResult(output_folder, self.config.infrastructure.dump_tar_every_n_samples)
-        self.metrics_store = MetricsStore(self.log_folder)
-        self.execution_counter = 0
-
-    @abstractmethod
-    def execute(self, tar_files: list[str | Path]):
-        pass
-    
-
-
-
-def execute_filter(
-        filter_name: Callable,
-        captions: list[str],
-        images: list[Image.Image],
-        parameters: dict[str, Any]
-    ) -> list[bool]:
-    """
-    Apply a filter to the samples and return a boolean mask
-    """
-    start_time = time.time()
-    if captions is not None and images is not None:
-        boolean_mask = filter_name(captions, images, **parameters)
-    elif captions is not None:
-        boolean_mask = filter_name(captions, **parameters)
-    elif images is not None:
-        boolean_mask = filter_name(images, **parameters)
-    else:
-        raise ValueError("No samples to filter")
-    elapsed_time = time.time() - start_time
-    return  boolean_mask, elapsed_time
-
-def apply_filter_mask(
-        uids: list[str],
-        mask: list[bool],
-    ) -> tuple[list[str], list[str]]:
-    """
-    Apply a filter mask to items and data, returning both kept and filtered items
-    
-    Args:
-        items: List of identifiers (e.g., UIDs)
-        mask: Boolean mask for filtering
-    Returns:
-        Tuple of (kept_items, filtered_items)
-    """
-    kept_uids = []
-    filtered_uids = []
-
-    for item, m in zip(uids, mask):
-        if m:  # Keep this item
-            kept_uids.append(item)
-        else:  # Filter out this item
-            filtered_uids.append(item)
-
-    return kept_uids, filtered_uids

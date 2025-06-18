@@ -4,11 +4,8 @@ from argparse import Namespace
 from made.bin.main import main
 
 
-def test_ray_made_pipeline(ray_init, data_path, output_folder, log_folder, config_path):
+def test_ray_made_pipeline(data_path, output_folder, log_folder, config_path):
 
-    # if not ray_flag:
-    #     pytest.skip("Skipping Ray test because --ray flag was not provided.") 
-    
     args = Namespace(   
         filtering_step_name="UnimodalTextFilter",
         shards_path=data_path,

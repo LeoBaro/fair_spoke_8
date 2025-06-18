@@ -6,7 +6,7 @@ from typing import Dict, Optional
 from collections import defaultdict
 import logging
 
-from made.data_pipeline.common import Singleton
+from made.data_pipeline.common.singleton import Singleton
 import ray
 
 class MetricsStore(metaclass=Singleton):
@@ -44,12 +44,8 @@ class MetricsStore(metaclass=Singleton):
             "filter_rate": round((input_count - output_count) / input_count if input_count > 0 else 0, 5),
             "elapsed_time": round(elapsed_time, 5)
         }
-        
-        if extra_data:
-            if extra_data_keys:
-                metric["parameters"] = {p: str(v) for p, v in extra_data.items() if p in extra_data_keys}
-            else:
-                metric["parameters"] = {p: str(v) for p, v in extra_data.items()}
+        if extra_data and extra_data_keys:
+            metric["parameters"] = {p: str(v) for p, v in extra_data.items() if p in extra_data_keys}
             
         self.filter_metrics[func_name].append(metric)
     
@@ -80,7 +76,7 @@ class MetricsStore(metaclass=Singleton):
                 "min_elapsed_time_seconds": round(min(times), 5),
                 "max_elapsed_time_seconds": round(max(times), 5),
                 "calls": len(times),
-                "parameters": metrics[0]['parameters']
+                "parameters": metrics[0]['parameters'] if 'parameters' in metrics[0] else {}
             }
             
         return summary
@@ -90,10 +86,18 @@ class MetricsStore(metaclass=Singleton):
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         worker_suffix = self.worker_id.replace(":", "_")
         
+        import numpy as np
+        def custom_converter(obj):
+            if isinstance(obj, np.int64):
+                return int(obj)
+            if isinstance(obj, np.float64):
+                return float(obj)
+            return str(obj)
+        
         # Save summary
         summary_path = self.output_path / f"metrics_summary_{worker_suffix}_{timestamp}.json"
         with open(summary_path, 'w', encoding="utf-8") as f:
-            json.dump(self.get_summary(), f, indent=2)
+            json.dump(self.get_summary(), f, default=custom_converter, indent=2)
             
         # Save detailed metrics
         details_path = self.output_path / f"metrics_details_{worker_suffix}_{timestamp}.json"
@@ -101,6 +105,6 @@ class MetricsStore(metaclass=Singleton):
             json.dump({
                 "worker_id": self.worker_id,
                 "filter_metrics": dict(self.filter_metrics)
-            }, f, indent=2)
+            }, f, default=custom_converter, indent=2)
         
         return summary_path, details_path

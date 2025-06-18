@@ -2,6 +2,8 @@
 *.egg-info
 *.ipynb_checkpoints
 **/wandb
+src/made/models/*.pth
+src/made/models/*.pt
 test/out/*
 test/logs/*
 **/*.json
@@ -17,3 +19,4 @@ benchmark/out_*
 benchmark/preliminary_benchmarks/
 full_datacomp_unimodal_text_filter_logs/
 full_datacomp_unimodal_text_filter_output/
+test/webdataset_output

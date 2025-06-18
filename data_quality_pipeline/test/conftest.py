@@ -1,8 +1,8 @@
-import logging
-from datetime import datetime
-from pathlib import Path
-
 import pytest
+import logging
+from pathlib import Path
+from datetime import datetime
+
 import ray
 
 from made.config import Config
@@ -28,96 +28,58 @@ def webdataset_output_folder():
     webdataset_output_folder.mkdir(parents=True, exist_ok=True)
     return webdataset_output_folder
 
-
 @pytest.fixture(scope="session")
 def tar_files(data_path):
     return sorted([str(data_path/s) for s in Path(data_path).glob("*.tar")])
 
-def pytest_addoption(parser):
-    parser.addoption(
-        "--ray", action="store_true", default=False, help="Run Ray-based tests"
-    )
-    # For future multi node tests 
-    parser.addoption(
-        "--multinode", action="store_true", default=False, help="Run multinode Ray-based tests"
-    )
+@pytest.fixture(scope="session")
+def config_path():
+    config_override_for_tests = {
+        "save_bad_uids": False,
+        "logging_level": "DEBUG",
+        "num_workers": 2,
+        "num_gpus_per_worker": 0.4,
+        "batch_size": 33,
+        "dump_tar_every_n_samples": 1000
+    }
+    return Config.create_config(config_override_for_tests, "/tmp/test.yaml")
 
 @pytest.fixture(scope="session")
-def ray_flag(request):
-    return request.config.getoption("--ray")
-
-# For future multi node tests 
-@pytest.fixture(scope="session")
-def multinode_flag(request):
-    return request.config.getoption("--multinode")
+def config(config_path):
+    return Config(config_path)
 
 @pytest.fixture(scope="session")
-def ray_init(ray_flag):
-    if ray_flag:
-        ray.init(
-            num_cpus=4,
-            num_gpus=1,
-            logging_level=logging.DEBUG,
-            runtime_env={
-                "env_vars": {
-                    "RAY_DEBUG": "1"
-                }
-        })
+def test_images_path_aspect_ratio():
+    return Path(__file__).parent / "data" / "test_images" / "aspect_ratio"
+
+@pytest.fixture(scope="session")
+def test_images_path_text_detection():
+    return Path(__file__).parent / "data" / "test_images" / "text_detection"
+
+@pytest.fixture(scope="session")
+def test_images_path_similarity():
+    return Path(__file__).parent / "data" / "test_images" / "similarity"
+
+@pytest.fixture(scope="session")
+def test_images_path_specificity():
+    return Path(__file__).parent / "data" / "test_images" / "specificity"
+
+@pytest.fixture(scope="function")
+def ray_init():
+    ray.init(
+        num_cpus=4,
+        num_gpus=1,
+        logging_level=logging.DEBUG,
+        runtime_env={
+            "env_vars": {
+                "RAY_DEBUG": "1"
+            }
+    })
     yield
-    if ray_flag:
-        ray.shutdown()
+    ray.shutdown()
 
 @ray.remote
 def post_mortem(x):
     x += 1
     raise Exception("An exception is raised")
     return x
-
-@pytest.fixture(scope="session")
-def config_path(request):
-    config_file_for_tests_path = "/tmp/test.yaml"
-    with open(config_file_for_tests_path, "w") as f:
-        f.write("""
-infrastructure:
-    enable_metrics: true
-    save_bad_uids: false
-    logging_level: DEBUG
-    log_to_driver: true
-    num_workers: 2
-    num_gpus_per_worker: 0.4
-    batch_size: 33
-    dump_tar_every_n_samples: 1000
-
-unimodal_text:
-    caption_min_words: 2
-    caption_min_chars: 5
-
-    lang_detection_model_path: models/lid.176.bin
-    lang_detection_score_threshold: 0.7
-    lang_detection_language: en
-
-    tagging_model_name: en_core_web_trf
-    good_captions_pos_distribution_path: models/common_pos_patterns.txt
-
-unimodal_vision:
-    image_min_aspect_ratio: 0.8
-    image_max_aspect_ratio: 3.0
-    image_min_dimension: 50
-
-    text_threshold: 0.6
-    text_detection_model_path: models
-    text_detection_mag_ratio: 0.5
-                
-multimodal:
-    dfn_model: leobaro/DFN-public
-    dfn_percentile_to_drop: 25
-    clip_caption_max_length: 77
-
-""")
-    return config_file_for_tests_path
-
-
-@pytest.fixture(scope="session")
-def config(config_path):
-    return Config(config_path)
-
