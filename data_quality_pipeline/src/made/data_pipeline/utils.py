@@ -149,7 +149,6 @@ def set_plotting_configuration():
         'legend.fontsize': 14,          # Legend font size
 
         'figure.figsize': [6.4, 4.8],   # Default figure size (in inches)
-        'figure.dpi': 300,              # High resolution for reports
         'savefig.dpi': 300,             # High resolution for saved images
         'axes.grid': True,              # Enable grid
         'grid.alpha': 0.3,              # Grid transparency
