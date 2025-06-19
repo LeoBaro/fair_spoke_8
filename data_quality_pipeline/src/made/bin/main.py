@@ -4,13 +4,13 @@ from pathlib import Path
 import argparse
 
 from made.config import Config
-from made.data_pipeline.utils import connect_or_start_ray, collect_tar_files, cleanup
+from made.data_pipeline.utils import connect_or_start_ray, collect_tar_files, cleanup, remove_and_recreate_dirs
 from made.data_pipeline.actor_group import ActorGroup
 
 
 def cli():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--filtering-step-name", type=str, required=True, choices=["UnimodalTextFilter", "UnimodalVisionFilter", "MultimodalFilter"])
+    parser.add_argument("--filtering-step-name", type=str, required=True, choices=["UnimodalTextFilter", "UnimodalVisionFilter", "MultimodalAlignmentFilter", "MultimodalSpecificityFilter"])
     parser.add_argument("--shards-path", type=str, required=True)
     parser.add_argument("--config-path", type=str, required=True)
     parser.add_argument("--log-folder", type=str, required=True)
@@ -18,46 +18,33 @@ def cli():
     parser.add_argument("--ray-address", type=str, required=False, default=None)
     return parser.parse_args()
 
-def make_actor_group(config_path: str | Path, filtering_step_name: str, config: dict, log_folder: Path, output_folder: Path):
-    if filtering_step_name == "UnimodalTextFilter":
-        num_workers = config.infrastructure.num_workers
-    elif filtering_step_name == "UnimodalVisionFilter":
-        num_workers = config.infrastructure.num_workers
-    elif filtering_step_name == "MultimodalFilter":
-        num_workers = config.infrastructure.num_workers
-    else:
-        raise ValueError(f"Invalid filtering step name: {filtering_step_name}")
-
-    return ActorGroup(filtering_step_name, num_workers, config_path, log_folder, output_folder)
-
 def main(args):
     config = Config(args.config_path)
 
-    Path(args.log_folder).mkdir(parents=True, exist_ok=True)
-    Path(args.output_folder).mkdir(parents=True, exist_ok=True)
+    remove_and_recreate_dirs([args.output_folder, args.log_folder])
 
     connect_or_start_ray(
         args.ray_address, 
         Config().infrastructure.logging_level, 
         Config().infrastructure.log_to_driver, 
-        Path(args.log_folder)
+        Path(args.log_folder),
+        int(float(Config().infrastructure.ray_object_store_memory))
     )
 
     logger = logging.getLogger("ray")
 
     logger.info("Configuration:\n %s", config)
     
-    actor_group = make_actor_group(
-        args.config_path, 
-        args.filtering_step_name, 
-        config, 
-        args.log_folder, 
+    actor_group = ActorGroup(
+        args.filtering_step_name,
+        args.config_path,
+        args.log_folder,
         args.output_folder
     )
 
     s = time()
     actor_group.run(
-        collect_tar_files(args.shards_path),
+        collect_tar_files(args.shards_path, recursive=True),
     )
     tar_paths, uids_paths = actor_group.get_results()
     took = time() - s

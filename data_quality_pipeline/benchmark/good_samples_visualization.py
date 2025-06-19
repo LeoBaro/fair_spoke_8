@@ -1,14 +1,11 @@
-import argparse
-import glob
 import os
-import random
-import numpy as np
+import glob
+import argparse
 from pathlib import Path
-import warnings
-warnings.filterwarnings("ignore", message="Glyph.*missing from font.*")
+
 from made.data_pipeline.utils import collect_tar_files
-from collections import defaultdict
-from utils import extract_samples_from_tar_files, create_samples_visualization
+from made.data_pipeline.data.datacomp_handler import decode_webdataset, get_next_batch
+from utils import create_samples_visualization
 
 def get_good_uids(results_folder):
     good_uids_files = glob.glob(os.path.join(results_folder, "*.txt"))
@@ -31,34 +28,34 @@ def create_txt_file_list(uids: list[str], captions: list[str], output_file: str)
 def cli():
     parser = argparse.ArgumentParser()
     parser.add_argument("-f", "--folder", type=str, required=True)
-    parser.add_argument("-t", "--tar-files-path", type=str, required=False, default="/home/leobaro/workspace/labs/fair_spoke_8/data_quality_pipeline/benchmark/data")
-    parser.add_argument("-n", "--num-samples", type=int, required=False, default=20)
+    parser.add_argument("-t", "--tar-files-path", type=str, required=True)
+    parser.add_argument("-n", "--num-samples", type=int, required=True)
+    parser.add_argument("-i", "--number-of-samples-per-image", type=int, required=False, default=20)
     return parser.parse_args()
 
 def main(args):
-    tar_files = collect_tar_files(args.tar_files_path, recursive=False)
-
-    bad_uids = glob.glob(os.path.join(args.folder, "baduids_*.txt"))
-
-    filter_names = set([Path(f).stem.split("_")[1] for f in bad_uids])
-
-    bad_uids_per_filter = defaultdict(list)
-    for filter_name in filter_names:
-        files = glob.glob(os.path.join(args.folder, f"baduids_{filter_name}*.txt"))
-        for file in files:
-            with open(file, "r", encoding="utf-8") as f:
-                bad_uids_per_filter[filter_name].extend(f.read().splitlines())
-
-
-    output_dir = Path(Path(args.folder) / "good_uids_visualizations")
+    output_dir_name = f"{Path(args.folder).name}_good_uids_visualizations"
+    output_dir = Path(Path(args.folder).parent / output_dir_name)
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    good_uids = get_good_uids(args.folder)
-    random.shuffle(good_uids)
-    good_uids = good_uids[:args.num_samples]
-    uids, images, captions = extract_samples_from_tar_files(good_uids, tar_files)
-    create_samples_visualization(uids, images, captions, f"Good uids", output_dir )
+    dataset = decode_webdataset(
+        collect_tar_files(args.tar_files_path, recursive=False),
+        get_images=True,
+        get_captions=True,
+        batch_size=args.number_of_samples_per_image
+    )
+    dataset = iter(dataset)
 
+    count = 0
+    while count < args.num_samples:
+        try:
+            batch_uids, batch_images, batch_captions = get_next_batch(dataset)
+            output_path = output_dir / f"good_uids_{count}_{count + args.number_of_samples_per_image}"
+            create_samples_visualization(batch_uids, batch_images, batch_captions, f"", output_path)
+            count += args.number_of_samples_per_image
+        except Exception as e:
+            print("Exception!", e)
+            break
 
 
 

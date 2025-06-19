@@ -1,30 +1,16 @@
-import argparse
 import logging
+import argparse
+import traceback
 from time import time
 from pathlib import Path
-import traceback
 
 from made.config import Config
-from made.bin.cli import cli
-from made.data_pipeline.utils import connect_or_start_ray, collect_tar_files, save_uids, cleanup
+from made.data_pipeline.utils import connect_or_start_ray, collect_tar_files, cleanup
 from made.data_pipeline.actor_group import ActorGroup
-from utils import create_config, create_output_folder, create_results_and_log_folders, create_result_file
+from utils import create_output_folder, create_results_and_log_folders, create_result_file
 
 import os
 os.environ["RAY_DEDUP_LOGS"] = "0"
-
-def make_actor_group(config_path: str | Path, filtering_step_name: str, config: dict, log_folder: Path, output_folder: Path):
-    if filtering_step_name == "UnimodalTextFilter":
-        num_workers = config.infrastructure.num_workers
-    elif filtering_step_name == "UnimodalVisionFilter":
-        num_workers = config.infrastructure.num_workers
-    elif filtering_step_name == "MultimodalFilter":
-        num_workers = config.infrastructure.num_workers
-    else:
-        raise ValueError(f"Invalid filtering step name: {filtering_step_name}")
-
-    actor_group = ActorGroup(filtering_step_name, num_workers, config_path, log_folder, output_folder)
-    return actor_group
 
 def execution_loop(
         filtering_step_name, 
@@ -37,6 +23,7 @@ def execution_loop(
         enable_metrics: bool, 
         save_bad_uids: bool
     ):
+    count = 0
     for nw in num_workers:
             config = {
                 "num_workers": nw,
@@ -48,7 +35,7 @@ def execution_loop(
                 current_output_folder, current_log_folder = create_results_and_log_folders(output_folder, suffix=f"_nw{nw}_bs{batch_size}_i{iteration_index}")
                 try:
                     print("Running pipeline..")
-                    took = run_pipeline(filtering_step_name, shards_path, current_output_folder, current_log_folder, config)
+                    took = run_actor_group(count, filtering_step_name, shards_path, current_output_folder, current_log_folder, config)
                     with open(result_file, "a", encoding="utf-8") as f:
                         f.write(f"{nw},{batch_size},{iteration_index},{took}\n")
                     cleanup()
@@ -56,16 +43,17 @@ def execution_loop(
                     print(f"Error running pipeline: {e}")
                     traceback.print_exc()
                     cleanup()
+                count += 1
 
-def run_pipeline(filtering_step_name: str, shards_path: str, output_folder: Path, log_folder: Path, config: dict):
-    config_path = create_config(config, output_folder)
+def run_actor_group(index: int, filtering_step_name: str, shards_path: str, output_folder: Path, log_folder: Path, override_config: dict):
+    config_path = Config.create_config(override_config, output_folder / f"config_{index}.yaml")
     config = Config(config_path)
 
     connect_or_start_ray(None, config.infrastructure.logging_level, config.infrastructure.log_to_driver, log_folder)
 
     logger = logging.getLogger("ray")
 
-    actor_group = make_actor_group(config_path, filtering_step_name, config, log_folder, output_folder)
+    actor_group = ActorGroup(filtering_step_name, config_path, log_folder, output_folder)
 
     s = time()
     actor_group.run(collect_tar_files(shards_path, recursive=False))

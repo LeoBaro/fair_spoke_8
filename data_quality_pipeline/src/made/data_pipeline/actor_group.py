@@ -4,29 +4,37 @@ import ray
 import logging
 import time
 
-from made.data_pipeline.steps.unimodal_text_filtering import UnimodalTextFilter
-from made.data_pipeline.steps.unimodal_vision_filtering import UnimodalVisionFilter 
-from made.data_pipeline.steps.multimodal_filtering import MultimodalFilter
+from made.data_pipeline.actors.unimodal_text_filtering import UnimodalTextFilter
+from made.data_pipeline.actors.unimodal_vision_filtering import UnimodalVisionFilter 
+from made.data_pipeline.actors.multimodal_alignment_filtering import MultimodalAlignmentFilter
+from made.data_pipeline.actors.multimodal_specificity_filtering import MultimodalSpecificityFilter
+from made.config import Config
 
 class ActorGroup:
     def __init__(
             self, 
             actor_type: str, 
-            num_workers: int,
             config_path: str | Path, 
             log_folder: str | Path, 
             output_folder: str | Path
         ):
         self.logger = logging.getLogger("ray")
-        self.logger.info("Initializing actor group. Actor type: %s with %d workers", actor_type, num_workers)
+        self.config = Config(config_path)
+
+        self.logger.info("Initializing actor group. Actor type: %s with %d workers", actor_type, self.config.infrastructure.num_workers)
         self.actors = [getattr(sys.modules[__name__], actor_type)
-            .options(name=f"{actor_type}_{i}")
-            .remote(config_path, log_folder, output_folder) for i in range(num_workers)]
+            .options(
+                name=f"{actor_type}_{i}",
+                num_gpus=self.config.infrastructure.num_gpus_per_worker,
+                max_concurrency=1
+            )
+            .remote(config_path, log_folder, output_folder) 
+            for i in range(self.config.infrastructure.num_workers)]
+
         self.futures = None
         self.tar_paths = []
         self.uids_paths = []
         self.actor_type = actor_type
-        self.num_workers = num_workers
 
     def run(self, tar_files: list[str | Path]):
         tar_splits = [tar_files[i::len(self.actors)] for i in range(len(self.actors))]
@@ -35,7 +43,7 @@ class ActorGroup:
             actor.execute.remote(tar_split) for actor, tar_split in zip(self.actors, tar_splits)
         ]
 
-    def get_results(self, timeout: float = 300.0, check_interval: float = 1.0) -> tuple[list[str], list[str]]:
+    def get_results(self, timeout: float = 21600.0, check_interval: float = 5.0) -> tuple[list[str], list[str]]:
         """
         Get results from Ray workers with timeout and proper error handling.
 
@@ -57,7 +65,7 @@ class ActorGroup:
         completed_futures = []
         remaining_futures = self.futures.copy()
 
-        self.logger.info(f"Waiting for {len(remaining_futures)} workers to complete (timeout: {timeout}s)")
+        self.logger.info("Waiting for %d workers to complete (timeout: %ds)", len(remaining_futures), timeout)
 
         while remaining_futures and (time.time() - start_time) < timeout:
             # Check which futures are ready (non-blocking)
@@ -68,7 +76,7 @@ class ActorGroup:
             )
 
             if ready_futures:
-                self.logger.info(f"{len(ready_futures)} workers completed, {len(remaining_futures)} remaining")
+                self.logger.info("%d workers completed, %d remaining", len(ready_futures), len(remaining_futures))
                 completed_futures.extend(ready_futures)
 
             # Small sleep to prevent busy waiting
@@ -77,7 +85,7 @@ class ActorGroup:
 
         # Handle timeout case
         if remaining_futures:
-            self.logger.error(f"Timeout after {timeout}s. {len(remaining_futures)} workers still running")
+            self.logger.error("Timeout after %ds. %d workers still running", timeout, len(remaining_futures))
 
             # Cancel remaining futures
             for future in remaining_futures:
@@ -88,9 +96,9 @@ class ActorGroup:
         # Get results from completed futures
         try:
             results = ray.get(completed_futures)
-            self.logger.info(f"Successfully retrieved results from {len(results)} workers")
+            self.logger.info("Successfully retrieved results from %d workers", len(results))
         except Exception as e:
-            self.logger.error(f"Failed to get results from workers: {e}")
+            self.logger.error("Failed to get results from workers: %s", e)
             raise RuntimeError(f"Worker execution failed: {e}")
 
         # Process results
@@ -108,10 +116,10 @@ class ActorGroup:
                 self.uids_paths.extend(uids_paths_per_actor)
 
             except Exception as e:
-                self.logger.error(f"Failed to process result from worker {i}: {e}")
+                self.logger.error("Failed to process result from worker %d: %s", i, e)
                 raise RuntimeError(f"Invalid result from worker {i}: {e}")
 
-        self.logger.info(f"Processing complete. Total paths: {len(self.tar_paths)} tar, {len(self.uids_paths)} uids")
+        self.logger.info("Processing complete. Total paths: %d tar, %d uids", len(self.tar_paths), len(self.uids_paths))
         return self.tar_paths, self.uids_paths
 
     def kill_actors(self):
@@ -119,4 +127,4 @@ class ActorGroup:
             ray.kill(actor)
 
     def __str__(self):
-        return f"ActorGroup(actor_type={self.actor_type}, num_workers={self.num_workers})"
+        return f"ActorGroup(actor_type={self.actor_type}, num_workers={self.config.infrastructure.num_workers})"

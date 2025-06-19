@@ -5,13 +5,14 @@ import seaborn as sns
 import pandas as pd
 import argparse
 from pathlib import Path
+
+from made.data_pipeline.utils import set_plotting_configuration
+set_plotting_configuration()
+
 def cli():
     parser = argparse.ArgumentParser()
     parser.add_argument("-f", "--benchmark-file", type=str, required=True, help="CSV file with the benchmark results")
     parser.add_argument("-t", "--title", type=str, required=True)
-    parser.add_argument("-m", "--modalities", type=str, required=True, choices=["unimodal_text", "unimodal_vision", "multimodal"])
-    # parser.add_argument("-g", "--group_by", type=str, required=True, choices=["num_workers", "batch_size"])
-
     return parser.parse_args()
 
 def main(args):
@@ -19,12 +20,9 @@ def main(args):
     df = pd.read_csv(args.benchmark_file)
     df["speedup"] = 1 - (df["took"] / max(df["took"]))
     
-    summary_df = df.groupby(f"{args.modalities}_num_workers").agg({"took": ["mean", "std"], "speedup": ["mean", "std"]}).reset_index()
+    summary_df = df.groupby(f"num_workers").agg({"took": ["mean", "std"], "speedup": ["mean", "std"]}).reset_index()
     summary_df.columns = ["Workers", "Mean Time (s)", "Std Dev", "Mean Speedup", "Std Dev Speedup"]
     
-
-    # Set Seaborn style
-    sns.set(style="whitegrid")
 
     fig = plt.errorbar(
         summary_df["Workers"],
@@ -39,9 +37,9 @@ def main(args):
         label="Mean Execution Time ± Std Dev"
     )
     # Customize the plot
-    plt.xlabel(f"Number of {args.modalities} Workers", fontsize=12)
-    plt.ylabel("Mean Execution Time (s)", fontsize=12)
-    plt.title(args.title, fontsize=14)
+    plt.xlabel(f"Number of Workers")
+    plt.ylabel("Mean Execution Time (s)")
+    plt.title(args.title)
     plt.xticks(summary_df["Workers"])  # Ensure x-axis has correct worker values
     plt.ylim(0)
     plt.savefig(Path(args.benchmark_file).parent / f"scalability_plot_{args.title.replace(' ', '_')}.png", dpi=300, bbox_inches="tight")
@@ -61,9 +59,9 @@ def main(args):
         color="b",  # Line color
         label="Mean Speedup ± Std Dev"
     )
-    plt.xlabel(f"Number of {args.modalities} Workers", fontsize=12)
-    plt.ylabel("Mean Speedup (%)", fontsize=12)
-    plt.title(args.title, fontsize=14)
+    plt.xlabel(f"Number of Workers")
+    plt.ylabel("Mean Speedup (%)")
+    plt.title(args.title)
     plt.xticks(summary_df["Workers"])  # Ensure x-axis has correct worker values
     plt.ylim(0,1)
     plt.savefig(Path(args.benchmark_file).parent / f"scalability_plot_speedup_{args.title}.png", dpi=300, bbox_inches="tight")
