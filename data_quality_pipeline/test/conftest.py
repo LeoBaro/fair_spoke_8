@@ -74,7 +74,9 @@ def ray_init():
             "env_vars": {
                 "RAY_DEBUG": "1"
             }
-    })
+        },
+        object_store_memory=2e10
+    )
     yield
     ray.shutdown()
 

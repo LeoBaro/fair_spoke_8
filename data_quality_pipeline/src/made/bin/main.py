@@ -4,7 +4,7 @@ from pathlib import Path
 import argparse
 
 from made.config import Config
-from made.data_pipeline.utils import connect_or_start_ray, collect_tar_files, cleanup
+from made.data_pipeline.utils import connect_or_start_ray, collect_tar_files, cleanup, remove_and_recreate_dirs
 from made.data_pipeline.actor_group import ActorGroup
 
 
@@ -21,14 +21,14 @@ def cli():
 def main(args):
     config = Config(args.config_path)
 
-    Path(args.log_folder).mkdir(parents=True, exist_ok=True)
-    Path(args.output_folder).mkdir(parents=True, exist_ok=True)
+    remove_and_recreate_dirs([args.output_folder, args.log_folder])
 
     connect_or_start_ray(
         args.ray_address, 
         Config().infrastructure.logging_level, 
         Config().infrastructure.log_to_driver, 
-        Path(args.log_folder)
+        Path(args.log_folder),
+        int(float(Config().infrastructure.ray_object_store_memory))
     )
 
     logger = logging.getLogger("ray")
