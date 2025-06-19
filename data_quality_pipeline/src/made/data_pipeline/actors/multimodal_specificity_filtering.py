@@ -40,6 +40,7 @@ class MultimodalSpecificityFilter(BaseFilteringBlock):
                     "curvature": self.meru_model.curvature.exp(),
                     "specificity_threshold": self.config.specificity.specificity_threshold,
                     "weight": self.config.specificity.weight,
+                    "worker_id": self.worker_id
                 },
                 param_keys_for_metrics=["specificity_threshold", "weight"]
             ),

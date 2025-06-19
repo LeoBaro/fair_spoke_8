@@ -28,6 +28,7 @@ infrastructure:
     num_gpus_per_worker: {override_config["num_gpus_per_worker"] if "num_gpus_per_worker" in override_config else 0.1}
     batch_size:          {override_config["batch_size"] if "batch_size" in override_config else 50} 
     dump_tar_every_n_samples: {override_config["dump_tar_every_n_samples"] if "dump_tar_every_n_samples" in override_config else 10000}
+    ray_object_store_memory: {override_config["ray_object_store_memory"] if "ray_object_store_memory" in override_config else 2e10}
     
 unimodal_text:
     caption_min_words: {override_config["caption_min_words"] if "caption_min_words" in override_config else 2}

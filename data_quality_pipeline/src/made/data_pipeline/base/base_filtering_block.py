@@ -1,3 +1,4 @@
+import ray
 import time
 import logging
 from pathlib import Path
@@ -25,7 +26,8 @@ class BaseFilteringBlock(ABC):
         self.log_folder = log_folder
         self.filtering_result = FilteringResult(output_folder, self.config.infrastructure.dump_tar_every_n_samples)
         self.metrics_store = MetricsStore(self.log_folder)
-    
+        self.worker_id = ray.get_runtime_context().get_worker_id() if ray.is_initialized() else None
+
     @abstractmethod
     def get_filter_steps(self) -> List[FilterStep]:
         """Return list of filter steps to apply"""

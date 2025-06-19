@@ -1,6 +1,7 @@
 import re
 import logging
 from pathlib import Path
+import shutil
 
 import ray
 import numpy as np
@@ -10,8 +11,14 @@ from made.data_pipeline.common.metrics_store import MetricsStore
 from made.data_pipeline.common.singleton import Singleton
 
 """ collection of stateless utility functions """
+def remove_and_recreate_dirs(dirs):
+    for d in dirs:
+        path = Path(d)
+        if path.exists():
+            shutil.rmtree(path)
+        path.mkdir(parents=True, exist_ok=True)
 
-def connect_or_start_ray(ray_address, logging_level, log_to_driver, log_folder):
+def connect_or_start_ray(ray_address, logging_level, log_to_driver, log_folder, ray_object_store_memory):
     if ray_address:
         ray.init(
             address=ray_address,
@@ -21,7 +28,8 @@ def connect_or_start_ray(ray_address, logging_level, log_to_driver, log_folder):
     else:
         ray.init(
             logging_level=getattr(logging, logging_level),
-            log_to_driver=log_to_driver
+            log_to_driver=log_to_driver,
+            object_store_memory=ray_object_store_memory
         )
     logger = logging.getLogger("ray")
     logger.info("Setting up logging to %s", log_folder / "ray_log.log")
