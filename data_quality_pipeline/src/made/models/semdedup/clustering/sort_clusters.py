@@ -18,7 +18,7 @@ import numpy as np
 from tqdm import tqdm
 
 from typing import List, Tuple, Union
-from made.semdedup.clustering.utils import get_logger
+from made.models.semdedup.clustering.utils import get_logger
 
 
 def assign_and_sort_clusters(

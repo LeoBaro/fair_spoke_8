@@ -17,7 +17,7 @@ import yaml
 import pprint
 import pathlib
 from typing import Union, Optional
-from made.semdedup.clustering.utils import get_logger
+from made.models.semdedup.clustering.utils import get_logger
 
 
 def faiss_index_to_gpu(cpu_index):

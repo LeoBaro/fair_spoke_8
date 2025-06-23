@@ -10,11 +10,11 @@ from transformers import CLIPModel, CLIPImageProcessor
 
 from made.paths import MADE_PATH
 from made.data_pipeline.base.base_filtering_block import BaseFilteringBlock
-from made.semdedup.compute_pretrained_embeddings import get_embeddings
-from made.semdedup.clustering.clustering import compute_centroids
-from made.semdedup.clustering.sort_clusters import assign_and_sort_clusters
-from made.semdedup.semdedup_logic import process_shard
-from made.semdedup.extract_dedup_data import extract_pruned_data
+from made.models.semdedup.compute_pretrained_embeddings import get_embeddings
+from made.models.semdedup.clustering.clustering import compute_centroids
+from made.models.semdedup.clustering.sort_clusters import assign_and_sort_clusters
+from made.models.semdedup.semdedup_logic import process_shard
+from made.models.semdedup.extract_dedup_data import extract_pruned_data
 from made.data_pipeline.data.datacomp_handler import (
     decode_webdataset, 
     get_next_batch,
@@ -167,7 +167,7 @@ class SemanticDedupFilter(BaseFilteringBlock):
         stage_start_time = time.time()
         
         dataset_iter = iter(dataset)
-        batch_size = self.config.semdedup.batch_size
+        # batch_size = self.config.semdedup.batch_size
         batch_indices = 0
         
         while True:

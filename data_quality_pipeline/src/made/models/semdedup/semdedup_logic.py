@@ -9,7 +9,7 @@ import torch
 import numpy as np
 import pandas as pd
 
-from made.semdedup.constants import (
+from made.models.semdedup.constants import (
     DIST_METRIC_INDEX, 
     IMAGE_ID_IN_CLUSTER_INDEX, 
     IMAGE_UID_INDEX
