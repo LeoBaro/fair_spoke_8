@@ -17,8 +17,7 @@ from made.models.semdedup.semdedup_logic import process_shard
 from made.models.semdedup.extract_dedup_data import extract_pruned_data
 from made.data_pipeline.data.datacomp_handler import (
     decode_webdataset, 
-    get_next_batch,
-    get_dataset_size
+    get_next_batch
 )
 
 
