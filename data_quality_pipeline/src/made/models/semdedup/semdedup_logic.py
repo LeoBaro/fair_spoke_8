@@ -135,6 +135,8 @@ def process_shard(shard: int, config=None):
         ]
     )
 
+    config.semdedup.eps_list = [float(eps) for eps in config.semdedup.eps_list]
+
     eps_df_dicts = {
         eps: pd.DataFrame(
             columns=["duplicates_ratio", "num_duplicates", "cluster_id"]

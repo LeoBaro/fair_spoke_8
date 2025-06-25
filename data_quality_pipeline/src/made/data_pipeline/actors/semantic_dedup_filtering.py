@@ -39,8 +39,8 @@ class SemanticDedupFilter(BaseFilteringBlock):
         self.logger.info("Initializing SemanticDedupFilter on %s", self.device)
         
         # Initialize CLIP model
-        self.model = CLIPModel.from_pretrained(self.config.semdedup.clip_model)
-        self.image_processor = CLIPImageProcessor.from_pretrained(self.config.semdedup.clip_model)
+        self.model = CLIPModel.from_pretrained(self.config.semdedup.model_name)
+        self.image_processor = CLIPImageProcessor.from_pretrained(self.config.semdedup.model_name)
         self.model = self.model.to(self.device)
         self.model = self.model.eval()
         
@@ -105,7 +105,7 @@ class SemanticDedupFilter(BaseFilteringBlock):
         dataset = decode_webdataset(
             tar_files,
             get_images=True,
-            get_captions=False,
+            get_captions=True,
             batch_size=self.config.semdedup.batch_size,
             valid_uids=all_uids
         )
@@ -138,7 +138,11 @@ class SemanticDedupFilter(BaseFilteringBlock):
         embed_float_type = self.config.semdedup.embed_float_type
         emb_memory_loc = self.config.semdedup.embs_memory_loc
         paths_memory_loc = self.config.semdedup.path_memory_loc
-        emb_size = self.config.semdedup.emd_size
+        # emb_size = self.config.semdedup.emd_size
+        emb_size = self.model.config.projection_dim
+
+        # Update the config to match the actual embedding size
+        self.config.semdedup.emd_size = emb_size
         
         os.makedirs(os.path.dirname(emb_memory_loc), exist_ok=True)
         os.makedirs(os.path.dirname(paths_memory_loc), exist_ok=True)
@@ -398,7 +402,7 @@ class SemanticDedupFilter(BaseFilteringBlock):
             raise ValueError("Missing 'semdedup' configuration section")
         
         required_fields = [
-            'clip_model', 'batch_size', 'embs_memory_loc', 'path_memory_loc',
+            'model_name', 'batch_size', 'embs_memory_loc', 'path_memory_loc',
             'emd_size', 'paths_str_type', 'embed_float_type', 'seed', 'eps'
         ]
         

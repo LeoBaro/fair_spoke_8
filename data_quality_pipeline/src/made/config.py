@@ -78,7 +78,7 @@ semdedup:
     dataset_size: {override_config["semdedup_dataset_size"] if "semdedup_dataset_size" in override_config else 0}
     batch_size: {override_config["semdedup_batch_size"] if "semdedup_batch_size" in override_config else 16}
     # -- embeddings size
-    emd_size: {override_config["semdedup_emd_size"] if "semdedup_emd_size" in override_config else 512}
+    emd_size: {override_config["semdedup_emd_size"] if "semdedup_emd_size" in override_config else 768}
     # -- Clustering parameters
     clustering:
         num_clusters: {override_config["semdedup_clustering_num_clusters"] if "semdedup_clustering_num_clusters" in override_config else 500}
