@@ -21,6 +21,7 @@ dependencies = [
     "Pillow>=11.1.0",
     "imageio",
     "easyocr",
+    "faiss-gpu-cu12",
     "pytest",
     "pytest-cov"
 ]

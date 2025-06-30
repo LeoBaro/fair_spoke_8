@@ -37,9 +37,9 @@ def config_path():
     config_override_for_tests = {
         "save_bad_uids": False,
         "logging_level": "DEBUG",
-        "num_workers": 2,
-        "num_gpus_per_worker": 0.4,
-        "batch_size": 33,
+        "num_workers": 1,
+        "num_gpus_per_worker": 1,
+        "batch_size": 16,
         "dump_tar_every_n_samples": 1000
     }
     return Config.create_config(config_override_for_tests, "/tmp/test.yaml")
@@ -67,7 +67,7 @@ def test_images_path_specificity():
 @pytest.fixture(scope="function")
 def ray_init():
     ray.init(
-        num_cpus=4,
+        num_cpus=8,
         num_gpus=1,
         logging_level=logging.DEBUG,
         runtime_env={
@@ -75,7 +75,7 @@ def ray_init():
                 "RAY_DEBUG": "1"
             }
         },
-        object_store_memory=2e10
+        object_store_memory=1e10
     )
     yield
     ray.shutdown()

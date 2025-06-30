@@ -10,7 +10,7 @@ from made.data_pipeline.actor_group import ActorGroup
 
 def cli():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--filtering-step-name", type=str, required=True, choices=["UnimodalTextFilter", "UnimodalVisionFilter", "MultimodalAlignmentFilter", "MultimodalSpecificityFilter"])
+    parser.add_argument("--filtering-step-name", type=str, required=True, choices=["UnimodalTextFilter", "UnimodalVisionFilter", "MultimodalAlignmentFilter", "MultimodalSpecificityFilter", "SemanticDedupFilter"])
     parser.add_argument("--shards-path", type=str, required=True)
     parser.add_argument("--config-path", type=str, required=True)
     parser.add_argument("--log-folder", type=str, required=True)
