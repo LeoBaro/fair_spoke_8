@@ -3,3 +3,4 @@
 .*/
 experiments/*.png
 full_datacomp_*
+data_quality_pipeline/src/made/semdedup/data/*

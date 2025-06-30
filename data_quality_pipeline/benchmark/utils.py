@@ -61,9 +61,16 @@ def extract_samples_from_tar_files(
     return uids, images, captions
 
 
-def create_samples_visualization(uids: list[str], images: list[np.ndarray], captions: list[str], title: str, output_path: Path):
+def create_samples_visualization(
+        uids: list[str], 
+        images: list[np.ndarray], 
+        captions: list[str], 
+        title: str, 
+        output_path: Path, 
+        dpi: int = 100
+    ):
     set_plotting_configuration()
-    assert len(uids) == len(images) == len(captions), "Input lists must be of equal length"
+    assert len(images) == len(captions), "Input lists must be of equal length"
     
     num_samples = len(images)
     num_cols = 4
@@ -78,15 +85,22 @@ def create_samples_visualization(uids: list[str], images: list[np.ndarray], capt
     for i in range(num_rows * num_cols):
         ax = axes[i]
         if i < num_samples:
-            ax.imshow(images[i])
-            wrapped_caption = "\n".join(textwrap.wrap(captions[i], width=40))
-            wrapped_uid = "\n".join(textwrap.wrap(f"UID: {uids[i]}", width=40))
-            ax.set_title(f"{wrapped_uid}\n{wrapped_caption}", fontsize=10)
+            image = images[i].resize((256, 256))
+            ax.imshow(image)
+            if uids[i] is None:
+                ax_title = f"{captions[i]}"
+            else:
+                ax_title = f"{uids[i]}\n{captions[i]}"
+            ax_title = "\n".join(textwrap.wrap(ax_title, width=35))
+            if len(ax_title) > 55:
+                ax_title=ax_title[:55]+"[...]"
+            ax.set_title(ax_title, fontsize=15)
             ax.axis("off")
         else:
             ax.axis("off")  # Hide any unused subplot axes
 
     plt.tight_layout(rect=[0, 0.03, 1, 0.95])  # Leave space for suptitle
-    plt.savefig(output_path)
+    plt.subplots_adjust(top=0.97, bottom=0.01, left=0.01, right=0.99)
+    plt.savefig(output_path, dpi=dpi)
     plt.close()
     print(f"Visualization saved to {output_path}")
