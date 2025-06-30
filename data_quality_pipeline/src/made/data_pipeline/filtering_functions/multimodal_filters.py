@@ -42,10 +42,40 @@ def filter_by_specificity(
         txt_ref,
         curvature,
         specificity_threshold: float,
-        weight: float,
-        worker_id: str
+        weight: float
     ) -> List[bool]:
     """Filter by specificity of the caption"""
+
+    image_specificity_scores, text_specificity_scores = _compute_specificity(
+        captions,
+        images,
+        meru_model,
+        trs,
+        tokenizer,
+        img_ref,
+        txt_ref,
+        curvature,
+    )
+
+    image_text_specificity_score = np.array(image_specificity_scores) * weight + np.array(text_specificity_scores) * (1 - weight)
+
+    #with open(f"specificity_scores_{worker_id}.txt", "a") as ssf:
+    #    for iss, tss, itss in zip(image_specificity_scores, text_specificity_scores, image_text_specificity_score):
+    #        ssf.write(f"{round(iss, 4)} {round(tss, 4)} {round(itss, 4)}\n")
+    boolean_mask = (image_text_specificity_score > specificity_threshold).tolist()
+    print("Number of samples that passed the spec filter: ", sum(boolean_mask))
+    return boolean_mask
+
+def _compute_specificity(
+        captions: List[str],
+        images: List[Image.Image],
+        meru_model,
+        trs,
+        tokenizer,
+        img_ref,
+        txt_ref,
+        curvature,
+    ) -> List[bool]:
     images = torch.stack([trs(im) for im in images]).to("cuda")
 
     with torch.no_grad():
@@ -61,15 +91,7 @@ def filter_by_specificity(
     encoded_images.detach().cpu()
     encoded_captions.detach().cpu()
 
-    image_text_specificity_score = np.array(image_specificity_scores) * weight + np.array(text_specificity_scores) * (1 - weight)
-
-    #with open(f"specificity_scores_{worker_id}.txt", "a") as ssf:
-    #    for iss, tss, itss in zip(image_specificity_scores, text_specificity_scores, image_text_specificity_score):
-    #        ssf.write(f"{round(iss, 4)} {round(tss, 4)} {round(itss, 4)}\n")
-    boolean_mask = (image_text_specificity_score > specificity_threshold).tolist()
-    print("Number of samples that passed the spec filter: ", sum(boolean_mask))
-    return boolean_mask
-
+    return image_specificity_scores, text_specificity_scores
 
 def _image_specificity(txt_ref: torch.Tensor, curv: float, image: torch.Tensor):
     txt_ref = txt_ref.to(image.device)
