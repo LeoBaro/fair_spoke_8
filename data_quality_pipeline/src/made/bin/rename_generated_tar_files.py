@@ -1,5 +1,5 @@
 import argparse
-from made.data_pipeline.utils import rename_thread_files
+from made.data_pipeline.utils import rename_tar_files
 
 def cli():
     parser = argparse.ArgumentParser()
@@ -7,7 +7,7 @@ def cli():
     return parser.parse_args()
 
 def main(args):
-    renamed_files = rename_thread_files(args.input_dir)
+    renamed_files = rename_tar_files(args.input_dir)
     print(renamed_files)
     
 if __name__ == "__main__":
