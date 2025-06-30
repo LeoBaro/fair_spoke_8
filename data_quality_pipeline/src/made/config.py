@@ -110,8 +110,6 @@ semdedup:
     which_to_keep: {override_config["semdedup_which_to_keep"] if "semdedup_which_to_keep" in override_config else "'easy'"}
     # -- output
     output_txt_path: {override_config["semdedup_output_txt_path"] if "semdedup_output_txt_path" in override_config else "data_quality_pipeline/src/made/models/semdedup/data/kept_examples.txt"}
-    specificity_threshold: {override_config["semdedup_specificity_threshold"] if "semdedup_specificity_threshold" in override_config else 0.5}
-    curvature: {override_config["semdedup_curvature"] if "semdedup_curvature" in override_config else 1.0}
 """
         with open(output_path, "w", encoding="utf-8") as f:
             f.write(config_raw)

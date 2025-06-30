@@ -8,6 +8,7 @@ from made.data_pipeline.actors.unimodal_text_filtering import UnimodalTextFilter
 from made.data_pipeline.actors.unimodal_vision_filtering import UnimodalVisionFilter 
 from made.data_pipeline.actors.multimodal_alignment_filtering import MultimodalAlignmentFilter
 from made.data_pipeline.actors.multimodal_specificity_filtering import MultimodalSpecificityFilter
+from made.data_pipeline.actors.semantic_dedup_filtering import SemanticDedupFilter
 from made.config import Config
 
 class ActorGroup:
