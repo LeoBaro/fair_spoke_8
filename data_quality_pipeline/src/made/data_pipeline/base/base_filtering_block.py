@@ -16,7 +16,7 @@ from made.data_pipeline.data.datacomp_handler import decode_webdataset, get_next
 
 class BaseFilteringBlock(ABC):
     """Base class for all filtering blocks with common filtering logic"""
-    
+
     def __init__(self, config_path: Path, log_folder: Path, output_folder: Path):
         self.logger = logging.getLogger("ray")
         self.device = "cuda" if torch.cuda.is_available() else "cpu"        
@@ -27,6 +27,7 @@ class BaseFilteringBlock(ABC):
         self.filtering_result = FilteringResult(output_folder, self.config.infrastructure.dump_tar_every_n_samples)
         self.metrics_store = MetricsStore(self.log_folder)
         self.worker_id = ray.get_runtime_context().get_worker_id() if ray.is_initialized() else None
+        self.output_folder = Path(output_folder)
 
     @abstractmethod
     def get_filter_steps(self) -> List[FilterStep]:

@@ -75,6 +75,7 @@ class SemanticDedupFilter(BaseFilteringBlock):
                     break
                 all_uids.extend(batch[0])  # UIDs are first element
             
+            self.logger.info(f"Running semantic deduplication pipeline for {len(all_uids)} samples")
             # Run the 5-stage pipeline
             self._run_semdedup_pipeline(tar_files, all_uids)
             
@@ -136,8 +137,8 @@ class SemanticDedupFilter(BaseFilteringBlock):
         
         paths_str_type = self.config.semdedup.paths_str_type
         embed_float_type = self.config.semdedup.embed_float_type
-        emb_memory_loc = self.config.semdedup.embs_memory_loc
-        paths_memory_loc = self.config.semdedup.path_memory_loc
+        emb_memory_loc = self.output_folder/"semdedup_output/data/embeddings/embs.npy"
+        paths_memory_loc = self.output_folder/"semdedup_output/data/embeddings/path.npy"
         # emb_size = self.config.semdedup.emd_size
         emb_size = self.model.config.projection_dim
 
@@ -217,7 +218,7 @@ class SemanticDedupFilter(BaseFilteringBlock):
         
         try:
             emb_memory = np.memmap(
-                self.config.semdedup.embs_memory_loc,
+                self.output_folder/"semdedup_output/data/embeddings/embs.npy",
                 dtype=self.config.semdedup.embed_float_type,
                 mode='r',
                 shape=(dataset_size, self.config.semdedup.emd_size)
@@ -229,7 +230,7 @@ class SemanticDedupFilter(BaseFilteringBlock):
                 niter=self.config.semdedup.clustering.niter,   
                 seed=self.config.semdedup.seed,
                 Kmeans_with_cos_dist=self.config.semdedup.clustering.Kmeans_with_cos_dist,
-                save_folder=self.config.semdedup.clustering.save_folder,
+                save_folder=self.output_folder/"semdedup_output/data/clustering",
                 logger=self.logger,
                 verbose=True
             )
@@ -248,14 +249,14 @@ class SemanticDedupFilter(BaseFilteringBlock):
         
         try:
             emb_memory = np.memmap(
-                self.config.semdedup.embs_memory_loc,
+                self.output_folder/"semdedup_output/data/embeddings/embs.npy",
                 dtype=self.config.semdedup.embed_float_type,
                 mode='r',
                 shape=(dataset_size, self.config.semdedup.emd_size)
             )
             
             paths_memory = np.memmap(
-                self.config.semdedup.path_memory_loc,
+                self.output_folder/"semdedup_output/data/embeddings/path.npy",
                 dtype=self.config.semdedup.paths_str_type,
                 mode='r',
                 shape=(dataset_size,)
@@ -267,8 +268,8 @@ class SemanticDedupFilter(BaseFilteringBlock):
                 sim_metric=self.config.semdedup.clustering.sim_metric,
                 keep_hard=self.config.semdedup.clustering.keep_hard,
                 kmeans_with_cos_dist=self.config.semdedup.clustering.Kmeans_with_cos_dist,
-                save_folder=self.config.semdedup.clustering.save_folder,
-                sorted_clusters_file_loc=self.config.semdedup.sorted_clusters_path,
+                save_folder=self.output_folder/"semdedup_output/data/clustering",
+                sorted_clusters_file_loc=self.output_folder/"semdedup_output/data/sorted_clusters",
                 cluster_ids=range(0, self.config.semdedup.clustering.num_clusters),
                 logger=self.logger
             )
@@ -288,7 +289,7 @@ class SemanticDedupFilter(BaseFilteringBlock):
         stage_start_time = time.time()
         
         try:
-            process_shard(shard=0, config=self.config)
+            process_shard(shard=0, output_folder=self.output_folder, config=self.config)
             
             self.logger.info(f"Stage 4 finished in {time.time() - stage_start_time:.2f} seconds.")
             
@@ -304,11 +305,11 @@ class SemanticDedupFilter(BaseFilteringBlock):
         
         try:
             all_good_uids = extract_pruned_data(
-                self.config.semdedup.sorted_clusters_path,
-                self.config.semdedup.semdedup_pruning_tables_path,
+                self.output_folder/"semdedup_output/data/sorted_clusters",
+                self.output_folder/"semdedup_output/data/dataframes",
                 self.config.semdedup.eps,
                 self.config.semdedup.clustering.num_clusters,
-                self.config.semdedup.output_txt_path,
+                self.output_folder/"semdedup_output/data/kept_examples.txt",
                 retreive_kept_samples=getattr(self.config, 'retreive_kept_samples', True)
             )
             
@@ -402,7 +403,7 @@ class SemanticDedupFilter(BaseFilteringBlock):
             raise ValueError("Missing 'semdedup' configuration section")
         
         required_fields = [
-            'model_name', 'batch_size', 'embs_memory_loc', 'path_memory_loc',
+            'model_name', 'batch_size', #'embs_memory_loc', 'path_memory_loc',
             'emd_size', 'paths_str_type', 'embed_float_type', 'seed', 'eps'
         ]
         
@@ -414,7 +415,7 @@ class SemanticDedupFilter(BaseFilteringBlock):
             raise ValueError("Missing 'clustering' configuration section under semdedup")
         
         clustering_fields = [
-            'num_clusters', 'niter', 'Kmeans_with_cos_dist', 'save_folder',
+            'num_clusters', 'niter', 'Kmeans_with_cos_dist',# 'save_folder',
             'sim_metric', 'keep_hard'
         ]
         
@@ -423,10 +424,10 @@ class SemanticDedupFilter(BaseFilteringBlock):
                 raise ValueError(f"Missing clustering configuration field: {field}")
         
         # Validate paths exist
-        required_paths = [
-            'sorted_clusters_path', 'semdedup_pruning_tables_path', 'output_txt_path'
-        ]
+        # required_paths = [
+        #     'sorted_clusters_path', 'semdedup_pruning_tables_path', 'output_txt_path'
+        # ]
         
-        for path_field in required_paths:
-            if not hasattr(self.config.semdedup, path_field):
-                raise ValueError(f"Missing path configuration: {path_field}")
+        # for path_field in required_paths:
+        #     if not hasattr(self.config.semdedup, path_field):
+        #         raise ValueError(f"Missing path configuration: {path_field}")
