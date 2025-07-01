@@ -32,21 +32,27 @@ def webdataset_output_folder():
 def tar_files(data_path):
     return sorted([str(data_path/s) for s in Path(data_path).glob("*.tar")])
 
-@pytest.fixture(scope="session")
-def config_path():
-    config_override_for_tests = {
-        "save_bad_uids": False,
-        "logging_level": "DEBUG",
-        "num_workers": 1,
-        "num_gpus_per_worker": 1,
-        "batch_size": 16,
-        "dump_tar_every_n_samples": 1000
-    }
-    return Config.create_config(config_override_for_tests, "/tmp/test.yaml")
+@pytest.fixture
+def get_config_path():
+    def _create_config(overrides=None):
+        config_override_for_tests = {
+            "save_bad_uids": False,
+            "logging_level": "DEBUG",
+            "num_workers": 1,
+            "num_gpus_per_worker": 1,
+            "batch_size": 16,
+            "dump_tar_every_n_samples": 1000
+        }
+        if overrides:
+            config_override_for_tests.update(overrides)
+        return Config.create_config(config_override_for_tests, "/tmp/test.yaml")
+    
+    return _create_config
 
-@pytest.fixture(scope="session")
-def config(config_path):
-    return Config(config_path)
+
+@pytest.fixture
+def config(get_config_path):
+    return Config(get_config_path())
 
 @pytest.fixture(scope="session")
 def test_images_path_aspect_ratio():

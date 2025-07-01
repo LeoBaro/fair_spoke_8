@@ -3,7 +3,8 @@ import pytest
 
 from made.data_pipeline.actor_group import ActorGroup
 
-def test_actor_group(ray_init, config_path, log_folder, webdataset_output_folder, tar_files):
+def test_actor_group(ray_init, get_config_path, log_folder, webdataset_output_folder, tar_files):
+    config_path = get_config_path({"num_workers": 2})
     actor_group = ActorGroup("UnimodalTextFilter", config_path, log_folder, webdataset_output_folder)
     assert ray.get_actor("UnimodalTextFilter_0") is not None
     assert ray.get_actor("UnimodalTextFilter_1") is not None

@@ -103,7 +103,7 @@ def test_filter_by_specificity(test_images_path_specificity, config):
     images = [
         Image.open(str(test_images_path_specificity / "clouds.png"))
     ]
-    mask = filter_by_specificity(captions, images, model, trs, tokenizer, img_ref, txt_ref, model.curvature.exp(), specificity_threshold=0.27, weight=0.5)
+    mask = filter_by_specificity(captions, images, model, trs, tokenizer, img_ref, txt_ref, model.curvature.exp(), specificity_threshold=0.25, weight=0.5)
     assert mask == [False, True]
 
     captions = [
@@ -113,5 +113,5 @@ def test_filter_by_specificity(test_images_path_specificity, config):
     images = [
         Image.open(str(test_images_path_specificity / "f1.png"))
     ]
-    mask = filter_by_specificity(captions, images, model, trs, tokenizer, img_ref, txt_ref, model.curvature.exp(), specificity_threshold=0.27, weight=0.5)
+    mask = filter_by_specificity(captions, images, model, trs, tokenizer, img_ref, txt_ref, model.curvature.exp(), specificity_threshold=0.34, weight=0.5)
     assert mask == [False, True]

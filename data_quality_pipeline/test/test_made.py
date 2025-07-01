@@ -4,12 +4,12 @@ from argparse import Namespace
 from made.bin.main import main
 
 
-def test_ray_made_pipeline(data_path, output_folder, log_folder, config_path):
+def test_ray_made_pipeline(data_path, output_folder, log_folder, get_config_path):
 
     args = Namespace(   
         filtering_step_name="UnimodalTextFilter",
         shards_path=data_path,
-        config_path=config_path,
+        config_path=get_config_path(),
         log_folder=log_folder,
         output_folder=output_folder,
         ray_address=None
