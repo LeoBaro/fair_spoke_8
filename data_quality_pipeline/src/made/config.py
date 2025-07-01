@@ -63,12 +63,6 @@ specificity:
 
 semdedup:
     model_name: {override_config["semdedup_model_name"] if "semdedup_model_name" in override_config else "openai/clip-vit-large-patch14"}
-    # -- directories
-    save_folder: {override_config["semdedup_save_folder"] if "semdedup_save_folder" in override_config else "data_quality_pipeline/src/made/models/semdedup/data/"}
-    sorted_clusters_path: {override_config["semdedup_sorted_clusters_path"] if "semdedup_sorted_clusters_path" in override_config else "data_quality_pipeline/src/made/models/semdedup/data/sorted_clusters"}
-    semdedup_pruning_tables_path: {override_config["semdedup_pruning_tables_path"] if "semdedup_pruning_tables_path" in override_config else "data_quality_pipeline/src/made/models/semdedup/data/dataframes"}
-    embs_memory_loc: {override_config["semdedup_embs_memory_loc"] if "semdedup_embs_memory_loc" in override_config else "data_quality_pipeline/src/made/models/semdedup/data/embeddings/embs.npy"}
-    path_memory_loc: {override_config["semdedup_path_memory_loc"] if "semdedup_path_memory_loc" in override_config else "data_quality_pipeline/src/made/models/semdedup/data/embeddings/path.npy"}
     # -- data type
     paths_str_type: {override_config["semdedup_paths_str_type"] if "semdedup_paths_str_type" in override_config else "'U256'"}
     embed_float_type: {override_config["semdedup_embed_float_type"] if "semdedup_embed_float_type" in override_config else "'float32'"}
@@ -86,7 +80,6 @@ semdedup:
         keep_hard: {override_config["semdedup_clustering_keep_hard"] if "semdedup_clustering_keep_hard" in override_config else True}
         sim_metric: {override_config["semdedup_clustering_sim_metric"] if "semdedup_clustering_sim_metric" in override_config else "'cosine'"}
         Kmeans_with_cos_dist: {override_config["semdedup_clustering_Kmeans_with_cos_dist"] if "semdedup_clustering_Kmeans_with_cos_dist" in override_config else True}
-        save_folder: {override_config["semdedup_clustering_save_folder"] if "semdedup_clustering_save_folder" in override_config else "data_quality_pipeline/src/made/models/semdedup/data/clustering"}
         text_emb_memory_loc: {override_config["semdedup_clustering_text_emb_memory_loc"] if "semdedup_clustering_text_emb_memory_loc" in override_config else None}
     # -- seed
     seed: {override_config["semdedup_seed"] if "semdedup_seed" in override_config else 1234}
@@ -108,8 +101,6 @@ semdedup:
         4.0, 4.2, 4.4, 4.6, 4.8, 5.0
         ]}
     which_to_keep: {override_config["semdedup_which_to_keep"] if "semdedup_which_to_keep" in override_config else "'easy'"}
-    # -- output
-    output_txt_path: {override_config["semdedup_output_txt_path"] if "semdedup_output_txt_path" in override_config else "data_quality_pipeline/src/made/models/semdedup/data/kept_examples.txt"}
 """
         with open(output_path, "w", encoding="utf-8") as f:
             f.write(config_raw)

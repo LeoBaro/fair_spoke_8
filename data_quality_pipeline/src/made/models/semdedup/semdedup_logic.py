@@ -1,11 +1,10 @@
 import math
 import os
 import pickle
-import pprint
 import random
 import time
 import torch
-
+from pathlib import Path
 import numpy as np
 import pandas as pd
 
@@ -102,7 +101,7 @@ def semdedup(cluster, cluster_reps):
         std_sim_to_cent,
     )
 
-def process_shard(shard: int, config=None):
+def process_shard(shard: int, output_folder: Path, config=None):
     # Use provided config or import from module if not provided
     if config is None:
         raise ValueError("Config must be provided to process_shard function")
@@ -118,7 +117,7 @@ def process_shard(shard: int, config=None):
     print(f"Processing clusters from {start} to {end}")
 
     embs = init_memmap_embs(
-        config.semdedup.embs_memory_loc, 
+        output_folder/"semdedup_output/data/embeddings/embs.npy", 
         config.semdedup.dataset_size,
         config.semdedup.emd_size
     )
@@ -144,48 +143,25 @@ def process_shard(shard: int, config=None):
         for eps in config.semdedup.eps_list
     }
 
-    eps_dict_file_loc = os.path.join(
-        config.semdedup.save_folder, f"statistics/dicts/shard_{start}.pt"
-    )
-    statistics_df_file_loc = os.path.join(
-        config.semdedup.save_folder, f"statistics/dataframes/shard_{start}.pkl"
-    )
+    eps_dict_file_loc = output_folder/f"semdedup_output/data/statistics/dicts/shard_{start}.pt"
+    
+    statistics_df_file_loc = output_folder/f"semdedup_output/data/statistics/dataframes/shard_{start}.pkl"
 
-    os.makedirs(os.path.dirname(
-        os.path.join(
-            config.semdedup.save_folder, f"statistics/dicts/"
-            )
-        ), 
-        exist_ok=True
-    )
+    os.makedirs(output_folder/f"semdedup_output/data/statistics/dicts/", exist_ok=True)
+    os.makedirs(output_folder/f"semdedup_output/data/statistics/dataframes/", exist_ok=True)
+
     
 
-    os.makedirs(os.path.dirname(
-        os.path.join(
-            config.semdedup.save_folder, f"statistics/dataframes/"
-            )
-        ), 
-        exist_ok=True
-    )
-    
 
     step_time = []
 
     for cluster_id in tqdm(range(start, end)):
         step_start_time = time.time()
 
-        os.makedirs(os.path.dirname(
-            os.path.join(
-                config.semdedup.save_folder, f"dataframes/"
-                )
-            ), 
-            exist_ok=True
-        )
+        os.makedirs(output_folder/f"semdedup_output/data/dataframes/", exist_ok=True)
         
 
-        df_file_loc = os.path.join(
-            config.semdedup.save_folder, f"dataframes/cluster_{cluster_id}.pkl"
-        )
+        df_file_loc = output_folder/f"semdedup_output/data/dataframes/cluster_{cluster_id}.pkl"
 
         if os.path.exists(df_file_loc):
             print(f"{df_file_loc} exists, moving on")
@@ -193,9 +169,7 @@ def process_shard(shard: int, config=None):
 
         # Load cluster representations.
         cluster_i = np.load(
-            os.path.join(
-                config.semdedup.sorted_clusters_path, f"cluster_{cluster_id}.npy"
-            )
+            output_folder/f"semdedup_output/data/sorted_clusters/cluster_{cluster_id}.npy"
         )
         cluster_size = cluster_i.shape[0]
         print("cluster_size: ", cluster_size)
@@ -210,11 +184,10 @@ def process_shard(shard: int, config=None):
             points_to_remove_df["cluster_uids"] = cluster_i[:, IMAGE_UID_INDEX]
             for eps in config.semdedup.eps_list:
                 points_to_remove_df[f"eps={eps}"] = [False]
-            if config.semdedup.save_folder != "":
-                df_dir = os.path.dirname(df_file_loc)
-                os.makedirs(df_dir, exist_ok=True)
-                with open(df_file_loc, "wb") as file:
-                    pickle.dump(points_to_remove_df, file)
+            df_dir = os.path.dirname(df_file_loc)
+            os.makedirs(df_dir, exist_ok=True)
+            with open(df_file_loc, "wb") as file:
+                pickle.dump(points_to_remove_df, file)
             print("DONE cluster_id ", cluster_id)
             continue
 
@@ -323,23 +296,21 @@ def process_shard(shard: int, config=None):
             ]
         )
 
-        if config.semdedup.save_folder != "":
-            with open(df_file_loc, "wb") as file:
-                pickle.dump(points_to_remove_df, file)
+        with open(df_file_loc, "wb") as file:
+            pickle.dump(points_to_remove_df, file)
 
         step_time.append(time.time() - step_start_time)
         print("Step time so far:", step_time)
         print("DONE cluster:", cluster_id)
 
-    if config.semdedup.save_folder != "":
-        eps_dir = os.path.dirname(eps_dict_file_loc)
-        os.makedirs(eps_dir, exist_ok=True)
-        torch.save(eps_df_dicts, eps_dict_file_loc)
+    eps_dir = os.path.dirname(eps_dict_file_loc)
+    os.makedirs(eps_dir, exist_ok=True)
+    torch.save(eps_df_dicts, eps_dict_file_loc)
 
-        stats_dir = os.path.dirname(statistics_df_file_loc)
-        os.makedirs(stats_dir, exist_ok=True)
-        with open(statistics_df_file_loc, "wb") as file:
-            pickle.dump(statistics_df, file)
+    stats_dir = os.path.dirname(statistics_df_file_loc)
+    os.makedirs(stats_dir, exist_ok=True)
+    with open(statistics_df_file_loc, "wb") as file:
+        pickle.dump(statistics_df, file)
 
     print("All clusters processed. Step times:", step_time)
     avg_step_time = (sum(step_time) / len(step_time)) if len(step_time) > 0 else 0
