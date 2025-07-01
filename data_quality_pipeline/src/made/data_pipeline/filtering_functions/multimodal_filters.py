@@ -58,12 +58,12 @@ def filter_by_specificity(
     )
 
     image_text_specificity_score = np.array(image_specificity_scores) * weight + np.array(text_specificity_scores) * (1 - weight)
-
+    print("image_text_specificity_score", image_text_specificity_score)
     #with open(f"specificity_scores_{worker_id}.txt", "a") as ssf:
     #    for iss, tss, itss in zip(image_specificity_scores, text_specificity_scores, image_text_specificity_score):
     #        ssf.write(f"{round(iss, 4)} {round(tss, 4)} {round(itss, 4)}\n")
     boolean_mask = (image_text_specificity_score > specificity_threshold).tolist()
-    print("Number of samples that passed the spec filter: ", sum(boolean_mask))
+    #print("Number of samples that passed the spec filter: ", sum(boolean_mask))
     return boolean_mask
 
 def _compute_specificity(
