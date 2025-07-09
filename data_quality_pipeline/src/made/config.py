@@ -75,8 +75,8 @@ semdedup:
     emd_size: {override_config["semdedup_emd_size"] if "semdedup_emd_size" in override_config else 768}
     # -- Clustering parameters
     clustering:
-        num_clusters: {override_config["semdedup_clustering_num_clusters"] if "semdedup_clustering_num_clusters" in override_config else 500}
-        niter: {override_config["semdedup_clustering_niter"] if "semdedup_clustering_niter" in override_config else 1000}
+        num_clusters: {override_config["semdedup_clustering_num_clusters"] if "semdedup_clustering_num_clusters" in override_config else 100}
+        niter: {override_config["semdedup_clustering_niter"] if "semdedup_clustering_niter" in override_config else 2000}
         keep_hard: {override_config["semdedup_clustering_keep_hard"] if "semdedup_clustering_keep_hard" in override_config else True}
         sim_metric: {override_config["semdedup_clustering_sim_metric"] if "semdedup_clustering_sim_metric" in override_config else "'cosine'"}
         Kmeans_with_cos_dist: {override_config["semdedup_clustering_Kmeans_with_cos_dist"] if "semdedup_clustering_Kmeans_with_cos_dist" in override_config else True}
