@@ -29,7 +29,8 @@ def execution_loop(
                 "num_workers": nw,
                 "batch_size": batch_size,
                 "enable_metrics": enable_metrics,
-                "save_bad_uids": save_bad_uids
+                "save_bad_uids": save_bad_uids,
+                "dump_tar_every_n_samples": 100
             }
             for iteration_index in range(num_executions):
                 current_output_folder, current_log_folder = create_results_and_log_folders(output_folder, suffix=f"_nw{nw}_bs{batch_size}_i{iteration_index}")
@@ -49,7 +50,7 @@ def run_actor_group(index: int, filtering_step_name: str, shards_path: str, outp
     config_path = Config.create_config(override_config, output_folder / f"config_{index}.yaml")
     config = Config(config_path)
 
-    connect_or_start_ray(None, config.infrastructure.logging_level, config.infrastructure.log_to_driver, log_folder)
+    connect_or_start_ray(None, config.infrastructure.logging_level, config.infrastructure.log_to_driver, log_folder, 2e10)
 
     logger = logging.getLogger("ray")
 
@@ -71,7 +72,7 @@ def cli():
         "--filtering_step_name", 
         type=str, 
         required=True,
-        choices=["UnimodalVisionFilter", "UnimodalTextFilter", "MultimodalFilter"]
+        choices=["UnimodalVisionFilter", "UnimodalTextFilter", "MultimodalAlignmentFilter", "MultimodalSpecificityFilter"]
     )
     parser.add_argument(
         "-n",
@@ -114,7 +115,13 @@ def cli():
         required=False,
         help="Save filtered uids to perform quality tests"
     )
-    
+    parser.add_argument(
+        "-d",
+        "--base_dir",
+        type=str,
+        required=False,
+        default=None
+    )
     
     return parser.parse_args()
 
@@ -125,7 +132,7 @@ def main(args):
     # python scalability_visualization.py -f out_*_filtername/benchmark_results.csv -t "Filter name"
     # python samples_visualization.py -r out_*_filtername 
     cleanup()
-    output_folder = create_output_folder(args.filtering_step_name)
+    output_folder = create_output_folder(args.filtering_step_name, args.base_dir)
     result_file = create_result_file(output_folder)
   
     execution_loop(

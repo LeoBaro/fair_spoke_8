@@ -9,13 +9,16 @@ import matplotlib.pyplot as plt
 from made.data_pipeline.data.datacomp_handler import decode_webdataset, get_next_batch
 from made.data_pipeline.utils import set_plotting_configuration
 
-def create_output_folder(filtering_step_name: str):
+def create_output_folder(filtering_step_name: str, base_dir: Path):
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    output_folder = Path(__file__).parent / f"out_{timestamp}_{filtering_step_name.lower()}"
+    if base_dir is None:
+        output_folder = Path(__file__).parent / f"out_{timestamp}_{filtering_step_name.lower()}"
+    else:
+        output_folder = Path(base_dir) / f"out_{timestamp}_{filtering_step_name.lower()}"
     output_folder.mkdir(exist_ok=True, parents=True)
     return output_folder
 
-def create_result_file(output_folder):
+def create_result_file(output_folder: Path):
     result_file = output_folder / "benchmark_results.csv"
     with open(result_file, "w", encoding="utf-8") as f:
         f.write("num_workers,batch_size,iteration_index,took\n")
@@ -61,7 +64,7 @@ def extract_samples_from_tar_files(
     return uids, images, captions
 
 
-def create_samples_visualization(uids: list[str], images: list[np.ndarray], captions: list[str], title: str, output_path: Path):
+def create_samples_visualization(uids: list[str], images: list[np.ndarray], captions: list[str], title: str, output_path: Path, output_suffix: str, add_uid: bool = False, add_caption: bool = False):
     set_plotting_configuration()
     assert len(uids) == len(images) == len(captions), "Input lists must be of equal length"
     
@@ -70,7 +73,7 @@ def create_samples_visualization(uids: list[str], images: list[np.ndarray], capt
     num_rows = math.ceil(num_samples / num_cols)
 
     fig, axes = plt.subplots(num_rows, num_cols, figsize=(4 * num_cols, 4 * num_rows))
-    fig.suptitle(title, fontsize=16)
+    #fig.suptitle(title, fontsize=16)
 
     # Flatten axes array for easy iteration
     axes = axes.flatten() if num_samples > 1 else [axes]
@@ -79,14 +82,19 @@ def create_samples_visualization(uids: list[str], images: list[np.ndarray], capt
         ax = axes[i]
         if i < num_samples:
             ax.imshow(images[i])
-            wrapped_caption = "\n".join(textwrap.wrap(captions[i], width=40))
-            wrapped_uid = "\n".join(textwrap.wrap(f"UID: {uids[i]}", width=40))
-            ax.set_title(f"{wrapped_uid}\n{wrapped_caption}", fontsize=10)
+            if add_uid:
+                wrapped_uid = "\n".join(textwrap.wrap(f"UID: {uids[i]}", width=40))
+                ax.set_title(f"{wrapped_uid}", fontsize=10)
+            if add_caption:
+                wrapped_caption = "\n".join(textwrap.wrap(captions[i], width=40))
+                ax.set_title(f"{wrapped_caption}", fontsize=10)
+            if add_uid and add_caption:
+                ax.set_title(f"{wrapped_uid}\n{wrapped_caption}", fontsize=10)
             ax.axis("off")
         else:
             ax.axis("off")  # Hide any unused subplot axes
 
     plt.tight_layout(rect=[0, 0.03, 1, 0.95])  # Leave space for suptitle
-    plt.savefig(output_path)
+    plt.savefig(output_path / f"{output_suffix}.png")
     plt.close()
     print(f"Visualization saved to {output_path}")

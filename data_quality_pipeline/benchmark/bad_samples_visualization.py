@@ -24,6 +24,9 @@ def cli():
     parser.add_argument("-f", "--folder", type=str, required=True)
     parser.add_argument("-t", "--tar-files-path", type=str, required=False, default="/home/leobaro/workspace/labs/fair_spoke_8/data_quality_pipeline/benchmark/data")
     parser.add_argument("-n", "--num-samples", type=int, required=False, default=20)
+    parser.add_argument("--add_uid", action="store_true", required=False, default=False)
+    parser.add_argument("--add_caption", action="store_true", required=False, default=False)
+
     return parser.parse_args()
 
 def main(args):
@@ -45,11 +48,11 @@ def main(args):
     output_dir.mkdir(parents=True, exist_ok=True)
 
     for filter_name, bad_uids_samples in bad_uids_per_filter.items():
-        uids, images, captions = extract_samples_from_tar_files(bad_uids_samples, tar_files, get_images=False, get_captions=True, num_samples=5000)
+        uids, images, captions = extract_samples_from_tar_files(bad_uids_samples, tar_files, get_images=False, get_captions=True, num_samples=500)
         create_txt_file_list(uids, captions, Path(args.folder) / "bad_uids_visualizations" / f"{filter_name}.txt")
         
         uids, images, captions = extract_samples_from_tar_files(bad_uids_samples, tar_files, get_images=True, get_captions=True, num_samples=20)
-        create_samples_visualization(uids, images, captions, f"Bad uids for {filter_name} filter", output_dir )
+        create_samples_visualization(uids, images, captions, f"Bad uids for {filter_name} filter", output_dir, filter_name, add_uid=args.add_uid, add_caption=args.add_caption)
 
 
 if __name__ == "__main__":
